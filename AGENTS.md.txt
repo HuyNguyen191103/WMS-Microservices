@@ -1,0 +1,100 @@
+# WNS Project - Root Agent Instructions
+
+## Project Overview
+
+This is a local microservices project for WNS management.
+
+Architecture:
+
+- Client: NextJS, port 3000
+- API Gateway: NestJS, port 3001
+- Auth Service: Spring Boot, port 5001
+- Biz Service: NestJS, port 5002
+- Auth Database: PostgreSQL
+- Biz Database: PostgreSQL
+
+Communication:
+
+- Client -> API Gateway: RESTful HTTP/JSON
+- API Gateway -> Auth Service: gRPC using Protobuf
+- API Gateway -> Biz Service: gRPC using Protobuf
+- Auth Service -> Auth Database: SQL/PostgreSQL
+- Biz Service -> Biz Database: SQL/PostgreSQL
+
+This project runs locally only.
+
+Service Ownership
+Client
+
+Responsibilities:
+
+User Interface
+Authentication UI
+Sending access_token
+Calling API Gateway
+
+Client must never call Auth Service or Biz Service directly.
+
+API Gateway
+
+Responsibilities:
+
+REST API entry point
+Request validation
+Authentication delegation
+REST-to-gRPC translation
+Service orchestration
+
+Gateway must not access any database.
+
+Gateway must not contain business logic.
+
+Auth Service
+
+Responsibilities:
+
+Authentication
+Authorization
+JWT access_token generation
+JWT access_token validation
+User management
+Role management
+User profile management
+
+Auth Service owns Auth Database.
+
+Biz Service
+
+Responsibilities:
+
+Warehouse Management business logic
+Product management
+Warehouse management
+Inventory management
+Inbound management
+Outbound management
+Activity logging
+
+Biz Service owns Biz Database.
+
+## Global Rules
+
+- Do not add cloud deployment configuration unless requested.
+- Do not add Docker/Kubernetes unless requested.
+- Database changes must be written manually as SQL scripts.
+- Keep each service responsible for its own database only.
+- Auth Service must never access Biz Database.
+- Biz Service must never access Auth Database.
+- API Gateway must not access any database directly.
+- API Gateway should only handle routing, request validation, authentication delegation, and REST-to-gRPC translation.
+- Business logic must stay inside the correct service.
+- Shared gRPC proto files should be placed in a shared proto folder if needed.
+## Database Rules
+
+Database schema is managed manually.
+Spring Boot:
+spring.jpa.hibernate.ddl-auto=none
+
+NestJS TypeORM:
+synchronize: false
+Never enable automatic schema creation or synchronization.
