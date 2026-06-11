@@ -1,3 +1,212 @@
 syntax = "proto3";
 
 package wns.wms.v1;
+
+service ProductApi {
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (ProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (ProductResponse);
+}
+
+service WarehouseApi {
+  rpc CreateWarehouse(CreateWarehouseRequest) returns (WarehouseResponse);
+  rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  rpc GetWarehouse(GetWarehouseRequest) returns (WarehouseResponse);
+  rpc UpdateWarehouse(UpdateWarehouseRequest) returns (WarehouseResponse);
+  rpc DeleteWarehouse(DeleteWarehouseRequest) returns (WarehouseResponse);
+  rpc CreateWarehouseLocation(CreateWarehouseLocationRequest) returns (WarehouseLocationResponse);
+  rpc ListWarehouseLocations(ListWarehouseLocationsRequest) returns (ListWarehouseLocationsResponse);
+  rpc GetWarehouseLocation(GetWarehouseLocationRequest) returns (WarehouseLocationResponse);
+  rpc UpdateWarehouseLocation(UpdateWarehouseLocationRequest) returns (WarehouseLocationResponse);
+  rpc DeleteWarehouseLocation(DeleteWarehouseLocationRequest) returns (WarehouseLocationResponse);
+}
+
+service ActivityLogApi {
+  rpc ListActivityLogs(ListActivityLogsRequest) returns (ListActivityLogsResponse);
+}
+
+message Product {
+  string product_id = 1;
+  string sku = 2;
+  string product_name = 3;
+  string description = 4;
+  string category = 5;
+  string unit = 6;
+  string status = 7;
+  string created_by = 8;
+  string updated_by = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message CreateProductRequest {
+  string sku = 1;
+  string product_name = 2;
+  string description = 3;
+  string category = 4;
+  string unit = 5;
+  string actor_username = 6;
+  string actor_user_id = 7;
+  string actor_role = 8;
+}
+
+message ListProductsRequest {}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message UpdateProductRequest {
+  string product_id = 1;
+  string sku = 2;
+  string product_name = 3;
+  string description = 4;
+  string category = 5;
+  string unit = 6;
+  string actor_username = 7;
+  string actor_user_id = 8;
+  string actor_role = 9;
+}
+
+message DeleteProductRequest {
+  string product_id = 1;
+  string actor_username = 2;
+  string actor_user_id = 3;
+  string actor_role = 4;
+}
+
+message ProductResponse {
+  Product product = 1;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+}
+
+message Warehouse {
+  string warehouse_id = 1;
+  string warehouse_code = 2;
+  string warehouse_name = 3;
+  string address = 4;
+  string status = 5;
+  string created_by = 6;
+  string updated_by = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message WarehouseLocation {
+  string location_id = 1;
+  string warehouse_id = 2;
+  string zone = 3;
+  string status = 4;
+  string created_by = 5;
+  string updated_by = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateWarehouseRequest {
+  string warehouse_code = 1;
+  string warehouse_name = 2;
+  string address = 3;
+  string actor_username = 4;
+  string actor_user_id = 5;
+  string actor_role = 6;
+}
+
+message ListWarehousesRequest {}
+
+message GetWarehouseRequest {
+  string warehouse_id = 1;
+}
+
+message UpdateWarehouseRequest {
+  string warehouse_id = 1;
+  string warehouse_code = 2;
+  string warehouse_name = 3;
+  string address = 4;
+  string actor_username = 5;
+  string actor_user_id = 6;
+  string actor_role = 7;
+}
+
+message DeleteWarehouseRequest {
+  string warehouse_id = 1;
+  string actor_username = 2;
+  string actor_user_id = 3;
+  string actor_role = 4;
+}
+
+message CreateWarehouseLocationRequest {
+  string warehouse_id = 1;
+  string zone = 2;
+  string actor_username = 3;
+  string actor_user_id = 4;
+  string actor_role = 5;
+}
+
+message ListWarehouseLocationsRequest {
+  string warehouse_id = 1;
+}
+
+message GetWarehouseLocationRequest {
+  string location_id = 1;
+}
+
+message UpdateWarehouseLocationRequest {
+  string location_id = 1;
+  string warehouse_id = 2;
+  string zone = 3;
+  string actor_username = 4;
+  string actor_user_id = 5;
+  string actor_role = 6;
+}
+
+message DeleteWarehouseLocationRequest {
+  string location_id = 1;
+  string actor_username = 2;
+  string actor_user_id = 3;
+  string actor_role = 4;
+}
+
+message WarehouseResponse {
+  Warehouse warehouse = 1;
+}
+
+message ListWarehousesResponse {
+  repeated Warehouse warehouses = 1;
+}
+
+message WarehouseLocationResponse {
+  WarehouseLocation location = 1;
+}
+
+message ListWarehouseLocationsResponse {
+  repeated WarehouseLocation locations = 1;
+}
+
+message ActivityLog {
+  string log_id = 1;
+  string user_id = 2;
+  string username = 3;
+  string action = 4;
+  string reference_type = 5;
+  string reference_id = 6;
+  string description = 7;
+  string created_at = 8;
+}
+
+message ListActivityLogsRequest {
+  int32 page = 1;
+}
+
+message ListActivityLogsResponse {
+  repeated ActivityLog activity_logs = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total_items = 4;
+  int32 total_pages = 5;
+}

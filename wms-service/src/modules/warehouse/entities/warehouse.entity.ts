@@ -12,6 +12,7 @@ export class Warehouse {
 
   @Column({
     name: 'warehouse_code',
+    type: 'varchar',
     length: 50,
     nullable: false,
   })
@@ -19,27 +20,28 @@ export class Warehouse {
 
   @Column({
     name: 'warehouse_name',
+    type: 'varchar',
     length: 255,
     nullable: false,
   })
   warehouseName!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'address', type: 'text', nullable: true })
   address!: string | null;
 
-  @Column({ length: 30, nullable: true })
+  @Column({ name: 'status', type: 'varchar', length: 30, nullable: true })
   status!: string | null;
 
-  @Column({ name: 'created_by', length: 100, nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
   createdBy!: string | null;
 
-  @Column({ name: 'updated_by', length: 100, nullable: true })
+  @Column({ name: 'updated_by', type: 'varchar', length: 100, nullable: true })
   updatedBy!: string | null;
 
-  @Column({ name: 'created_at', nullable: true })
+  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
   createdAt!: Date | null;
 
-  @Column({ name: 'updated_at', nullable: true })
+  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
   updatedAt!: Date | null;
 
   @OneToMany(() => WarehouseLocation, (location) => location.warehouse)

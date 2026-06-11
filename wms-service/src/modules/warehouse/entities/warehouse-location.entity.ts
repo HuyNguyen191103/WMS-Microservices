@@ -16,17 +16,26 @@ export class WarehouseLocation {
   @PrimaryGeneratedColumn('uuid', { name: 'location_id' })
   locationId!: string;
 
-  @Column({ name: 'warehouse_id', nullable: false })
+  @Column({ name: 'warehouse_id', type: 'uuid', nullable: false })
   warehouseId!: string;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ name: 'zone', type: 'varchar', length: 50, nullable: true })
   zone!: string | null;
 
-  @Column({ length: 30, nullable: true })
+  @Column({ name: 'status', type: 'varchar', length: 30, nullable: true })
   status!: string | null;
 
-  @Column({ name: 'created_at', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
+  createdBy!: string | null;
+
+  @Column({ name: 'updated_by', type: 'varchar', length: 100, nullable: true })
+  updatedBy!: string | null;
+
+  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
   createdAt!: Date | null;
+
+  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
+  updatedAt!: Date | null;
 
   @ManyToOne(() => Warehouse, (warehouse) => warehouse.locations)
   @JoinColumn({ name: 'warehouse_id', referencedColumnName: 'warehouseId' })

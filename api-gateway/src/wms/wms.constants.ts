@@ -1,0 +1,1 @@
+export const WMS_GRPC_CLIENT = 'WMS_GRPC_CLIENT';

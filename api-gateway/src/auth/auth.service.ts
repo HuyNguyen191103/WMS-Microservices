@@ -87,6 +87,35 @@ export class AuthService implements OnModuleInit {
     }
   }
 
+  async validateAccessToken(accessToken: string) {
+    try {
+      const metadata = new Metadata();
+      metadata.set('authorization', `Bearer ${accessToken}`);
+
+      const response = await firstValueFrom(
+        this.authGrpcClient.validateAccessToken({}, metadata),
+      );
+
+      if (!response.valid) {
+        throw new UnauthorizedException('Invalid access token');
+      }
+
+      return {
+        valid: response.valid,
+        user_id: response.userId ?? response.user_id ?? '',
+        username: response.username ?? '',
+        mail: response.mail ?? '',
+        roles: response.roles ?? [],
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw this.toHttpException(error, true);
+    }
+  }
+
   private toRegisterResponse(response: RegisterGrpcResponse) {
     return {
       user: this.toUserInfo(response.user),
