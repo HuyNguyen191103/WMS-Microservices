@@ -28,26 +28,30 @@ export class ProductService {
   async createProduct(request: CreateProductGrpcRequest) {
     const now = new Date();
     const actorUsername = this.getActorUsername(request);
-
-    const product = this.productRepository.create({
-      sku: request.sku,
-      productName: request.productName ?? request.product_name ?? '',
-      description: request.description || null,
-      category: request.category || null,
-      unit: request.unit || null,
-      status: ACTIVE_STATUS,
-      createdBy: actorUsername,
-      updatedBy: actorUsername,
-      createdAt: now,
-      updatedAt: now,
+    const existingProduct = await this.productRepository.findOne({
+      where: { sku: request.sku },
     });
+
+    const product = existingProduct ?? this.productRepository.create();
+    product.sku = request.sku;
+    product.productName = request.productName ?? request.product_name ?? '';
+    product.description = request.description || null;
+    product.category = request.category || null;
+    product.unit = request.unit || null;
+    product.status = ACTIVE_STATUS;
+    product.createdBy = actorUsername;
+    product.updatedBy = actorUsername;
+    product.createdAt = now;
+    product.updatedAt = now;
 
     const savedProduct = await this.productRepository.save(product);
     await this.createActivityLog(
       request,
       'PRODUCT_CREATE',
       savedProduct.productId,
-      `Created product ${savedProduct.sku}`,
+      existingProduct
+        ? `Overwrote product ${savedProduct.sku}`
+        : `Created product ${savedProduct.sku}`,
     );
 
     return { product: this.toGrpcProduct(savedProduct) };

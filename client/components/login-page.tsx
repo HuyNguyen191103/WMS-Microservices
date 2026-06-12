@@ -3,6 +3,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/auth-api";
+import {
+  LOGIN_SUCCESS_KEY,
+  setAccessTokenCookie,
+} from "@/lib/session";
 
 const demoAccounts = [
   {
@@ -26,13 +30,6 @@ const demoAccounts = [
     password: "employee01+02123456",
   },
 ];
-
-function setAccessTokenCookie(accessToken: string, expired?: number) {
-  const maxAge = Number.isFinite(expired) && expired ? Math.max(expired, 0) : 3600;
-  document.cookie = `access_token=${encodeURIComponent(
-    accessToken,
-  )}; path=/; max-age=${maxAge}; SameSite=Lax`;
-}
 
 export function LoginPage() {
   const router = useRouter();
@@ -84,8 +81,8 @@ export function LoginPage() {
     try {
       const auth = await login({ mail: mail.trim(), password });
       setAccessTokenCookie(auth.access_token, auth.expired);
-      sessionStorage.setItem("login_success", "true");
-      router.push("/default");
+      sessionStorage.setItem(LOGIN_SUCCESS_KEY, "true");
+      router.push("/home");
     } catch (caughtError) {
       setToast({
         title: "Sign in failed",
@@ -132,6 +129,7 @@ export function LoginPage() {
               onClick={() => setToast(null)}
               className="ml-auto h-7 w-7 shrink-0 rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               aria-label="Dismiss notification"
+              suppressHydrationWarning
             >
               x
             </button>
@@ -241,6 +239,7 @@ export function LoginPage() {
                 type="submit"
                 disabled={isSubmitting}
                 className="flex h-11 w-full items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                suppressHydrationWarning
               >
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </button>
@@ -266,6 +265,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => fillAccount(account)}
                   className="w-full rounded-md border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-400 hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  suppressHydrationWarning
                 >
                   <span className="text-sm font-semibold text-slate-950">
                     {account.role}

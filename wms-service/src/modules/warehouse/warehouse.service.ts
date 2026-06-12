@@ -38,23 +38,30 @@ export class WarehouseService {
   async createWarehouse(request: CreateWarehouseGrpcRequest) {
     const now = new Date();
     const actorUsername = this.getActorUsername(request);
-    const warehouse = this.warehouseRepository.create({
-      warehouseCode: request.warehouseCode ?? request.warehouse_code ?? '',
-      warehouseName: request.warehouseName ?? request.warehouse_name ?? '',
-      address: request.address || null,
-      status: ACTIVE_STATUS,
-      createdBy: actorUsername,
-      updatedBy: actorUsername,
-      createdAt: now,
-      updatedAt: now,
+    const warehouseCode = request.warehouseCode ?? request.warehouse_code ?? '';
+    const existingWarehouse = await this.warehouseRepository.findOne({
+      where: { warehouseCode },
     });
+
+    const warehouse = existingWarehouse ?? this.warehouseRepository.create();
+    warehouse.warehouseCode = warehouseCode;
+    warehouse.warehouseName = request.warehouseName ?? request.warehouse_name ?? '';
+    warehouse.address = request.address || null;
+    warehouse.status = ACTIVE_STATUS;
+    warehouse.createdBy = actorUsername;
+    warehouse.updatedBy = actorUsername;
+    warehouse.createdAt = now;
+    warehouse.updatedAt = now;
+
     const savedWarehouse = await this.warehouseRepository.save(warehouse);
 
     await this.createActivityLog(
       request,
       'WAREHOUSE_CREATE',
       savedWarehouse.warehouseId,
-      `Created warehouse ${savedWarehouse.warehouseCode}`,
+      existingWarehouse
+        ? `Overwrote warehouse ${savedWarehouse.warehouseCode}`
+        : `Created warehouse ${savedWarehouse.warehouseCode}`,
       'WAREHOUSE',
     );
 
