@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -12,7 +13,7 @@ import {
 import type { ClientGrpc } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
+import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
   ListWarehouseLocationsGrpcResponse,
   ListWarehousesGrpcResponse,
@@ -28,14 +29,6 @@ import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseLocationDto } from './dto/update-warehouse-location.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 
-const WRITE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER'];
-
-interface AuthenticatedUser {
-  user_id: string;
-  username: string;
-  roles: string[];
-}
-
 @Injectable()
 export class WarehouseService implements OnModuleInit {
   private readonly logger = new Logger(WarehouseService.name);
@@ -43,7 +36,6 @@ export class WarehouseService implements OnModuleInit {
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
-    private readonly authService: AuthService,
   ) {}
 
   onModuleInit() {
@@ -52,9 +44,7 @@ export class WarehouseService implements OnModuleInit {
     ).getService<WarehouseGrpcClient>('WarehouseApi');
   }
 
-  async createWarehouse(accessToken: string, body: CreateWarehouseDto) {
-    const user = await this.authenticateForWrite(accessToken);
-
+  async createWarehouse(user: AuthenticatedUser, body: CreateWarehouseDto) {
     return this.handleWarehouseGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.createWarehouse({
@@ -67,9 +57,7 @@ export class WarehouseService implements OnModuleInit {
     );
   }
 
-  async listWarehouses(accessToken: string) {
-    await this.authenticate(accessToken);
-
+  async listWarehouses() {
     const response = await this.handleListWarehousesGrpcRequest(
       firstValueFrom(this.warehouseGrpcClient.listWarehouses({})),
     );
@@ -81,21 +69,17 @@ export class WarehouseService implements OnModuleInit {
     };
   }
 
-  async getWarehouse(accessToken: string, warehouseId: string) {
-    await this.authenticate(accessToken);
-
+  async getWarehouse(warehouseId: string) {
     return this.handleWarehouseGrpcRequest(
       firstValueFrom(this.warehouseGrpcClient.getWarehouse({ warehouseId })),
     );
   }
 
   async updateWarehouse(
-    accessToken: string,
+    user: AuthenticatedUser,
     warehouseId: string,
     body: UpdateWarehouseDto,
   ) {
-    const user = await this.authenticateForWrite(accessToken);
-
     return this.handleWarehouseGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.updateWarehouse({
@@ -109,9 +93,7 @@ export class WarehouseService implements OnModuleInit {
     );
   }
 
-  async deleteWarehouse(accessToken: string, warehouseId: string) {
-    const user = await this.authenticateForWrite(accessToken);
-
+  async deleteWarehouse(user: AuthenticatedUser, warehouseId: string) {
     return this.handleWarehouseGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.deleteWarehouse({
@@ -123,11 +105,9 @@ export class WarehouseService implements OnModuleInit {
   }
 
   async createWarehouseLocation(
-    accessToken: string,
+    user: AuthenticatedUser,
     body: CreateWarehouseLocationDto,
   ) {
-    const user = await this.authenticateForWrite(accessToken);
-
     return this.handleWarehouseLocationGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.createWarehouseLocation({
@@ -139,9 +119,7 @@ export class WarehouseService implements OnModuleInit {
     );
   }
 
-  async listWarehouseLocations(accessToken: string, warehouseId?: string) {
-    await this.authenticate(accessToken);
-
+  async listWarehouseLocations(warehouseId?: string) {
     const response = await this.handleListWarehouseLocationsGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.listWarehouseLocations({ warehouseId }),
@@ -155,9 +133,7 @@ export class WarehouseService implements OnModuleInit {
     };
   }
 
-  async getWarehouseLocation(accessToken: string, locationId: string) {
-    await this.authenticate(accessToken);
-
+  async getWarehouseLocation(locationId: string) {
     return this.handleWarehouseLocationGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.getWarehouseLocation({ locationId }),
@@ -166,12 +142,10 @@ export class WarehouseService implements OnModuleInit {
   }
 
   async updateWarehouseLocation(
-    accessToken: string,
+    user: AuthenticatedUser,
     locationId: string,
     body: UpdateWarehouseLocationDto,
   ) {
-    const user = await this.authenticateForWrite(accessToken);
-
     return this.handleWarehouseLocationGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.updateWarehouseLocation({
@@ -184,9 +158,7 @@ export class WarehouseService implements OnModuleInit {
     );
   }
 
-  async deleteWarehouseLocation(accessToken: string, locationId: string) {
-    const user = await this.authenticateForWrite(accessToken);
-
+  async deleteWarehouseLocation(user: AuthenticatedUser, locationId: string) {
     return this.handleWarehouseLocationGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.deleteWarehouseLocation({
@@ -195,25 +167,6 @@ export class WarehouseService implements OnModuleInit {
         }),
       ),
     );
-  }
-
-  private async authenticate(accessToken: string): Promise<AuthenticatedUser> {
-    return this.authService.validateAccessToken(accessToken);
-  }
-
-  private async authenticateForWrite(accessToken: string) {
-    const user = await this.authenticate(accessToken);
-    this.assertRole(user, WRITE_ALLOWED_ROLES);
-
-    return user;
-  }
-
-  private assertRole(user: AuthenticatedUser, allowedRoles: string[]) {
-    const roles = user.roles.map((role) => role.toUpperCase());
-
-    if (!roles.some((role) => allowedRoles.includes(role))) {
-      throw new ForbiddenException('You do not have permission');
-    }
   }
 
   private toActorRequest(user: AuthenticatedUser) {
@@ -279,10 +232,8 @@ export class WarehouseService implements OnModuleInit {
 
     return {
       warehouse_id: warehouse.warehouseId ?? warehouse.warehouse_id ?? '',
-      warehouse_code:
-        warehouse.warehouseCode ?? warehouse.warehouse_code ?? '',
-      warehouse_name:
-        warehouse.warehouseName ?? warehouse.warehouse_name ?? '',
+      warehouse_code: warehouse.warehouseCode ?? warehouse.warehouse_code ?? '',
+      warehouse_name: warehouse.warehouseName ?? warehouse.warehouse_name ?? '',
       address: warehouse.address,
       status: warehouse.status,
       created_by: warehouse.createdBy ?? warehouse.created_by ?? '',
@@ -323,6 +274,10 @@ export class WarehouseService implements OnModuleInit {
 
     if (grpcError.code === status.NOT_FOUND) {
       return new NotFoundException(message);
+    }
+
+    if (grpcError.code === status.ALREADY_EXISTS) {
+      return new ConflictException(message);
     }
 
     if (grpcError.code === status.UNAUTHENTICATED) {

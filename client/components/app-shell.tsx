@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Activity,
   Boxes,
@@ -38,8 +45,22 @@ const navItems = [
 ];
 
 type AppShellProps = {
-  children: (context: { user: UserInfo | null; isLoadingUser: boolean }) => ReactNode;
+  children: ReactNode;
 };
+
+type AppShellContextValue = {
+  user: UserInfo | null;
+  isLoadingUser: boolean;
+};
+
+const AppShellContext = createContext<AppShellContextValue>({
+  user: null,
+  isLoadingUser: true,
+});
+
+export function useAppShell() {
+  return useContext(AppShellContext);
+}
 
 export function AppShell({ children }: AppShellProps) {
   const router = useRouter();
@@ -103,68 +124,35 @@ export function AppShell({ children }: AppShellProps) {
     router.replace("/");
   }
 
+  const contextValue = useMemo(
+    () => ({ user, isLoadingUser }),
+    [user, isLoadingUser],
+  );
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-white lg:block">
-        <div className="flex h-16 items-center border-b border-slate-200 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-white">
-            <Boxes className="h-5 w-5" />
+    <AppShellContext.Provider value={contextValue}>
+      <div className="min-h-screen bg-slate-100 text-slate-950">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-white lg:block">
+          <div className="flex h-16 items-center border-b border-slate-200 px-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-white">
+              <Boxes className="h-5 w-5" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-semibold text-slate-950">WNS</p>
+              <p className="text-xs text-slate-500">Management</p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-semibold text-slate-950">WNS</p>
-            <p className="text-xs text-slate-500">Management</p>
-          </div>
-        </div>
-        <nav className="space-y-1 p-3">
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
-                  isActive && "bg-slate-950 text-white hover:bg-slate-950 hover:text-white",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
-          <div>
-            <p className="text-sm font-semibold text-slate-950">
-              Hello, {user?.username || "User"}
-            </p>
-            <p className="text-xs text-slate-500">
-              {isLoadingUser ? "Loading profile..." : "Warehouse operations"}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
-        </header>
-
-        <div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
-          <div className="flex gap-2 overflow-x-auto">
+          <nav className="space-y-1 p-3">
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
+              const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-slate-600",
-                    pathname === item.href && "bg-slate-950 text-white",
+                    "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
+                    isActive && "bg-slate-950 text-white hover:bg-slate-950 hover:text-white",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -172,11 +160,51 @@ export function AppShell({ children }: AppShellProps) {
                 </Link>
               );
             })}
-          </div>
-        </div>
+          </nav>
+        </aside>
 
-        <main className="px-4 py-6 sm:px-6">{children({ user, isLoadingUser })}</main>
+        <div className="lg:pl-64">
+          <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
+            <div>
+              <p className="text-sm font-semibold text-slate-950">
+                Hello, {user?.username || "User"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {isLoadingUser ? "Loading profile..." : "Warehouse operations"}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
+          </header>
+
+          <div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
+            <div className="flex gap-2 overflow-x-auto">
+              {visibleNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-slate-600",
+                      pathname === item.href && "bg-slate-950 text-white",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <main className="px-4 py-6 sm:px-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </AppShellContext.Provider>
   );
 }

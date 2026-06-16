@@ -9,7 +9,6 @@ option java_outer_classname = "AuthProto";
 service AuthApi {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
-  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
   rpc GetMe(GetMeRequest) returns (GetMeResponse);
 }
 
@@ -34,17 +33,6 @@ message RegisterResponse {
 message AuthResponse {
   string access_token = 1;
   int64 expired = 2;
-}
-
-message ValidateAccessTokenRequest {
-}
-
-message ValidateAccessTokenResponse {
-  bool valid = 1;
-  string user_id = 2;
-  string mail = 3;
-  repeated string roles = 4;
-  string username = 5;
 }
 
 message GetMeRequest {

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTableColumn } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +22,7 @@ import {
 } from "@/lib/api/activity-log-api";
 
 export function ActivityLogPage() {
-  return (
-    <AppShell>
-      {() => <ActivityLogContent />}
-    </AppShell>
-  );
+  return <ActivityLogContent />;
 }
 
 function ActivityLogContent() {

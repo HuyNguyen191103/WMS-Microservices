@@ -1,5 +1,7 @@
 package com.example.auth.grpc;
 
+import com.example.auth.exception.AuthUserNotFoundException;
+import com.example.auth.exception.MailAlreadyExistsException;
 import com.example.auth.grpc.proto.AuthApiGrpc;
 import com.example.auth.grpc.proto.AuthResponse;
 import com.example.auth.grpc.proto.GetMeRequest;
@@ -7,64 +9,102 @@ import com.example.auth.grpc.proto.GetMeResponse;
 import com.example.auth.grpc.proto.LoginRequest;
 import com.example.auth.grpc.proto.RegisterRequest;
 import com.example.auth.grpc.proto.RegisterResponse;
-import com.example.auth.grpc.proto.ValidateAccessTokenRequest;
-import com.example.auth.grpc.proto.ValidateAccessTokenResponse;
 import com.example.auth.security.CustomUserPrincipal;
 import com.example.auth.service.AuthService;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AccountStatusException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 @GrpcService
 @RequiredArgsConstructor
+@Slf4j
 public class AuthGrpcService extends AuthApiGrpc.AuthApiImplBase {
 
 	private final AuthService authService;
 
 	@Override
 	public void register(RegisterRequest request, StreamObserver<RegisterResponse> responseObserver) {
-		responseObserver.onNext(authService.register(request));
-		responseObserver.onCompleted();
+		unary(responseObserver, () -> authService.register(request));
 	}
 
 	@Override
 	public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
-		responseObserver.onNext(authService.login(request));
-		responseObserver.onCompleted();
-	}
-
-	@Override
-	public void validateAccessToken(ValidateAccessTokenRequest request,
-			StreamObserver<ValidateAccessTokenResponse> responseObserver) {
-		CustomUserPrincipal principal = currentPrincipal();
-		responseObserver.onNext(ValidateAccessTokenResponse.newBuilder()
-				.setValid(true)
-				.setUserId(principal.getUserId().toString())
-				.setUsername(principal.getDisplayUsername())
-				.setMail(principal.getMail())
-				.addAllRoles(currentRoles(principal))
-				.build());
-		responseObserver.onCompleted();
+		unary(responseObserver, () -> authService.login(request));
 	}
 
 	@Override
 	public void getMe(GetMeRequest request, StreamObserver<GetMeResponse> responseObserver) {
-		responseObserver.onNext(authService.getMe(currentPrincipal().getUserId()));
-		responseObserver.onCompleted();
+		unary(responseObserver, () -> authService.getMe(currentPrincipal().getUserId()));
+	}
+
+	private <T> void unary(StreamObserver<T> responseObserver, Supplier<T> handler) {
+		try {
+			T response = Objects.requireNonNull(handler.get(), "gRPC response must not be null");
+			responseObserver.onNext(response);
+			responseObserver.onCompleted();
+		} catch (Exception ex) {
+			responseObserver.onError(toStatusRuntimeException(ex));
+		}
 	}
 
 	private CustomUserPrincipal currentPrincipal() {
-		return (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserPrincipal principal)) {
+			throw new AuthenticationCredentialsNotFoundException("Missing authenticated principal");
+		}
+		return principal;
 	}
 
-	private List<String> currentRoles(CustomUserPrincipal principal) {
-		return principal.getAuthorities().stream()
-				.map(GrantedAuthority::getAuthority)
-				.toList();
+	private StatusRuntimeException toStatusRuntimeException(Exception ex) {
+		if (ex instanceof StatusRuntimeException statusRuntimeException) {
+			return statusRuntimeException;
+		}
+
+		Status status = toStatus(ex);
+		if (status.getDescription() == null) {
+			status = status.withDescription(safeMessage(ex));
+		}
+		if (status.getCode() == Status.Code.INTERNAL) {
+			log.error("Unhandled Auth gRPC error", ex);
+		} else {
+			log.warn("Auth gRPC request failed: code={}, message={}", status.getCode(), ex.getMessage());
+		}
+		return status.asRuntimeException();
+	}
+
+	private Status toStatus(Exception ex) {
+		if (ex instanceof MailAlreadyExistsException) {
+			return Status.ALREADY_EXISTS.withDescription("Mail already exists");
+		}
+		if (ex instanceof AuthUserNotFoundException) {
+			return Status.NOT_FOUND.withDescription("User not found");
+		}
+		if (ex instanceof AuthenticationException) {
+			return Status.UNAUTHENTICATED.withDescription("Unauthenticated");
+		}
+		if (ex instanceof AccessDeniedException) {
+			return Status.PERMISSION_DENIED.withDescription("Permission denied");
+		}
+		if (ex instanceof IllegalArgumentException) {
+			return Status.INVALID_ARGUMENT.withDescription(safeMessage(ex));
+		}
+		return Status.INTERNAL.withDescription("Auth service request failed");
+	}
+
+	private String safeMessage(Exception ex) {
+		return ex.getMessage() == null ? "Auth service request failed" : ex.getMessage();
 	}
 
 }

@@ -3,83 +3,66 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
+import type { AuthenticatedUser } from '../../auth/authenticated-user.interface';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
+const CREATE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER', 'EMPLOYEE'];
+const WRITE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER'];
+
 @Controller('api/products')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService) {
+    console.log('ProductController initialized');
+  }
 
   @Post()
+  @Roles(...CREATE_ALLOWED_ROLES)
   createProduct(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() body: CreateProductDto,
   ) {
-    return this.productService.createProduct(
-      this.extractBearerToken(authorization),
-      body,
-    );
+    console.log('Received create product request:', { body });
+    return this.productService.createProduct(user, body);
   }
 
   @Get()
-  listProducts(@Headers('authorization') authorization: string | undefined) {
-    return this.productService.listProducts(
-      this.extractBearerToken(authorization),
-    );
+  listProducts() {
+    return this.productService.listProducts();
   }
 
   @Get(':productId')
-  getProduct(
-    @Headers('authorization') authorization: string | undefined,
-    @Param('productId') productId: string,
-  ) {
-    return this.productService.getProduct(
-      this.extractBearerToken(authorization),
-      productId,
-    );
+  getProduct(@Param('productId') productId: string) {
+    return this.productService.getProduct(productId);
   }
 
   @Patch(':productId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   updateProduct(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('productId') productId: string,
     @Body() body: UpdateProductDto,
   ) {
-    return this.productService.updateProduct(
-      this.extractBearerToken(authorization),
-      productId,
-      body,
-    );
+    return this.productService.updateProduct(user, productId, body);
   }
 
   @Delete(':productId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   deleteProduct(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('productId') productId: string,
   ) {
-    return this.productService.deleteProduct(
-      this.extractBearerToken(authorization),
-      productId,
-    );
-  }
-
-  private extractBearerToken(authorization?: string): string {
-    if (!authorization) {
-      throw new UnauthorizedException('Missing Authorization header');
-    }
-
-    const [scheme, token] = authorization.split(' ');
-    if (scheme !== 'Bearer' || !token) {
-      throw new UnauthorizedException('Invalid Authorization header');
-    }
-
-    return token;
+    return this.productService.deleteProduct(user, productId);
   }
 }

@@ -32,6 +32,13 @@ export class ProductService {
       where: { sku: request.sku },
     });
 
+    if (existingProduct?.status === ACTIVE_STATUS) {
+      throw new RpcException({
+        code: status.ALREADY_EXISTS,
+        message: 'Product SKU already exists',
+      });
+    }
+
     const product = existingProduct ?? this.productRepository.create();
     product.sku = request.sku;
     product.productName = request.productName ?? request.product_name ?? '';

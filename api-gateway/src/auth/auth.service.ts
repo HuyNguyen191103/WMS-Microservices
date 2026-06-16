@@ -1,9 +1,12 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -83,36 +86,7 @@ export class AuthService implements OnModuleInit {
 
       return this.toGetMeResponse(response);
     } catch (error) {
-      throw this.toHttpException(error, true);
-    }
-  }
-
-  async validateAccessToken(accessToken: string) {
-    try {
-      const metadata = new Metadata();
-      metadata.set('authorization', `Bearer ${accessToken}`);
-
-      const response = await firstValueFrom(
-        this.authGrpcClient.validateAccessToken({}, metadata),
-      );
-
-      if (!response.valid) {
-        throw new UnauthorizedException('Invalid access token');
-      }
-
-      return {
-        valid: response.valid,
-        user_id: response.userId ?? response.user_id ?? '',
-        username: response.username ?? '',
-        mail: response.mail ?? '',
-        roles: response.roles ?? [],
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      throw this.toHttpException(error, true);
+      throw this.toHttpException(error);
     }
   }
 
@@ -171,15 +145,11 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  private toHttpException(error: unknown, forceUnauthorized = false) {
+  private toHttpException(error: unknown) {
     const grpcError = error as { code?: number; details?: string };
     this.logger.warn(
       `Auth gRPC request failed: code=${grpcError.code ?? 'unknown'}, details=${grpcError.details ?? 'none'}`,
     );
-
-    if (forceUnauthorized) {
-      return new UnauthorizedException('Invalid access token');
-    }
 
     const message = grpcError.details || 'Auth service request failed';
 
@@ -187,19 +157,20 @@ export class AuthService implements OnModuleInit {
       return new BadRequestException(message);
     }
 
-    if (
-      grpcError.code === status.UNAUTHENTICATED ||
-      grpcError.code === status.PERMISSION_DENIED
-    ) {
+    if (grpcError.code === status.ALREADY_EXISTS) {
+      return new ConflictException(message);
+    }
+
+    if (grpcError.code === status.UNAUTHENTICATED) {
       return new UnauthorizedException(message);
     }
 
-    if (message.toLowerCase().includes('invalid credentials')) {
-      return new UnauthorizedException(message);
+    if (grpcError.code === status.PERMISSION_DENIED) {
+      return new ForbiddenException(message);
     }
 
-    if (message.toLowerCase().includes('already exists')) {
-      return new BadRequestException(message);
+    if (grpcError.code === status.NOT_FOUND) {
+      return new NotFoundException(message);
     }
 
     return new BadGatewayException(message);

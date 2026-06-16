@@ -5,6 +5,8 @@ import { join } from 'path';
 import { AUTH_GRPC_CLIENT } from './auth.constants';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   imports: [
@@ -18,10 +20,7 @@ import { AuthService } from './auth.service';
           options: {
             package: 'wns.auth.v1',
             protoPath: join(process.cwd(), '..', 'proto', 'auth.proto'),
-            url: configService.get<string>(
-              'AUTH_GRPC_URL',
-              'localhost:9091',
-            ),
+            url: configService.get<string>('AUTH_GRPC_URL', 'localhost:5001'),
             loader: {
               longs: String,
             },
@@ -31,7 +30,7 @@ import { AuthService } from './auth.service';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [AuthService, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

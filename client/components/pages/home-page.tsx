@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Package, Send, Truck, Warehouse } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import {
   Card,
@@ -17,11 +16,7 @@ import { listProducts } from "@/lib/api/product-api";
 import { listWarehouses } from "@/lib/api/warehouse-api";
 
 export function HomePage() {
-  return (
-    <AppShell>
-      {() => <HomeContent />}
-    </AppShell>
-  );
+  return <HomeContent />;
 }
 
 function HomeContent() {

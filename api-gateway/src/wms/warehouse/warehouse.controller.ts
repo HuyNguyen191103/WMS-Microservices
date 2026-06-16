@@ -3,143 +3,107 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
   Query,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
+import type { AuthenticatedUser } from '../../auth/authenticated-user.interface';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
 import { CreateWarehouseLocationDto } from './dto/create-warehouse-location.dto';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseLocationDto } from './dto/update-warehouse-location.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { WarehouseService } from './warehouse.service';
 
+const WRITE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER'];
+
 @Controller()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class WarehouseController {
   constructor(private readonly warehouseService: WarehouseService) {}
 
   @Post('api/warehouses')
+  @Roles(...WRITE_ALLOWED_ROLES)
   createWarehouse(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() body: CreateWarehouseDto,
   ) {
-    return this.warehouseService.createWarehouse(
-      this.extractBearerToken(authorization),
-      body,
-    );
+    return this.warehouseService.createWarehouse(user, body);
   }
 
   @Get('api/warehouses')
-  listWarehouses(@Headers('authorization') authorization: string | undefined) {
-    return this.warehouseService.listWarehouses(
-      this.extractBearerToken(authorization),
-    );
+  listWarehouses() {
+    return this.warehouseService.listWarehouses();
   }
 
   @Get('api/warehouses/:warehouseId')
-  getWarehouse(
-    @Headers('authorization') authorization: string | undefined,
-    @Param('warehouseId') warehouseId: string,
-  ) {
-    return this.warehouseService.getWarehouse(
-      this.extractBearerToken(authorization),
-      warehouseId,
-    );
+  getWarehouse(@Param('warehouseId') warehouseId: string) {
+    return this.warehouseService.getWarehouse(warehouseId);
   }
 
   @Patch('api/warehouses/:warehouseId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   updateWarehouse(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('warehouseId') warehouseId: string,
     @Body() body: UpdateWarehouseDto,
   ) {
-    return this.warehouseService.updateWarehouse(
-      this.extractBearerToken(authorization),
-      warehouseId,
-      body,
-    );
+    return this.warehouseService.updateWarehouse(user, warehouseId, body);
   }
 
   @Delete('api/warehouses/:warehouseId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   deleteWarehouse(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('warehouseId') warehouseId: string,
   ) {
-    return this.warehouseService.deleteWarehouse(
-      this.extractBearerToken(authorization),
-      warehouseId,
-    );
+    return this.warehouseService.deleteWarehouse(user, warehouseId);
   }
 
   @Post('api/warehouse-locations')
+  @Roles(...WRITE_ALLOWED_ROLES)
   createWarehouseLocation(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() body: CreateWarehouseLocationDto,
   ) {
-    return this.warehouseService.createWarehouseLocation(
-      this.extractBearerToken(authorization),
-      body,
-    );
+    return this.warehouseService.createWarehouseLocation(user, body);
   }
 
   @Get('api/warehouse-locations')
-  listWarehouseLocations(
-    @Headers('authorization') authorization: string | undefined,
-    @Query('warehouseId') warehouseId?: string,
-  ) {
-    return this.warehouseService.listWarehouseLocations(
-      this.extractBearerToken(authorization),
-      warehouseId,
-    );
+  listWarehouseLocations(@Query('warehouseId') warehouseId?: string) {
+    return this.warehouseService.listWarehouseLocations(warehouseId);
   }
 
   @Get('api/warehouse-locations/:locationId')
-  getWarehouseLocation(
-    @Headers('authorization') authorization: string | undefined,
-    @Param('locationId') locationId: string,
-  ) {
-    return this.warehouseService.getWarehouseLocation(
-      this.extractBearerToken(authorization),
-      locationId,
-    );
+  getWarehouseLocation(@Param('locationId') locationId: string) {
+    return this.warehouseService.getWarehouseLocation(locationId);
   }
 
   @Patch('api/warehouse-locations/:locationId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   updateWarehouseLocation(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('locationId') locationId: string,
     @Body() body: UpdateWarehouseLocationDto,
   ) {
     return this.warehouseService.updateWarehouseLocation(
-      this.extractBearerToken(authorization),
+      user,
       locationId,
       body,
     );
   }
 
   @Delete('api/warehouse-locations/:locationId')
+  @Roles(...WRITE_ALLOWED_ROLES)
   deleteWarehouseLocation(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('locationId') locationId: string,
   ) {
-    return this.warehouseService.deleteWarehouseLocation(
-      this.extractBearerToken(authorization),
-      locationId,
-    );
-  }
-
-  private extractBearerToken(authorization?: string): string {
-    if (!authorization) {
-      throw new UnauthorizedException('Missing Authorization header');
-    }
-
-    const [scheme, token] = authorization.split(' ');
-    if (scheme !== 'Bearer' || !token) {
-      throw new UnauthorizedException('Invalid Authorization header');
-    }
-
-    return token;
+    return this.warehouseService.deleteWarehouseLocation(user, locationId);
   }
 }

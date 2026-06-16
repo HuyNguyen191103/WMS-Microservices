@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Eye, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/app-shell";
+import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -54,11 +54,9 @@ const emptyLocationForm = {
 };
 
 export function WarehousePage() {
-  return (
-    <AppShell>
-      {({ user }) => <WarehouseContent canWrite={canWriteWarehouse(user)} />}
-    </AppShell>
-  );
+  const { user } = useAppShell();
+
+  return <WarehouseContent canWrite={canWriteWarehouse(user)} />;
 }
 
 function WarehouseContent({ canWrite }: { canWrite: boolean }) {

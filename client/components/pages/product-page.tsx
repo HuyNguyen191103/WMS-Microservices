@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/app-shell";
+import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable, DataTableColumn } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
@@ -41,15 +41,13 @@ const emptyForm = {
 const unitOptions = ["PCS", "BOX", "KG", "G", "M", "CM"];
 
 export function ProductPage() {
+  const { user } = useAppShell();
+
   return (
-    <AppShell>
-      {({ user }) => (
-        <ProductContent
-          canCreate={canCreateProduct(user)}
-          canWrite={canWriteProduct(user)}
-        />
-      )}
-    </AppShell>
+    <ProductContent
+      canCreate={canCreateProduct(user)}
+      canWrite={canWriteProduct(user)}
+    />
   );
 }
 

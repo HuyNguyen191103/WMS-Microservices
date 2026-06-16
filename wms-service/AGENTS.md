@@ -352,5 +352,3 @@ Outbound:
 * No need Unit Test
 
 
-promt detail:
-- tiếp theo bạn hãy xây dựng CRUD cho module warehouse nha và bạn hãy expose các endpoint bên api-gateway luôn nha. Về phân quyền thì 3 role ADMIN, DIRECTOR, MANAGER, sẽ có quyền về CRUD nha còn EMPLOYEE thì chỉ có quyền đọc thoi và sẽ xử lý xác thực, phân quyền ở api-gateway bằng cách sử dụng ValidateAccessToken nha. còn ở wms-service hãy code theo hướng expose ra wms.proto trước ròi code theo proto nha và các createdAt, updatedAt sẽ tự set ở BE nha còn status sẽ là ACTIVE khi tạo còn khi delete sẽ đổi thành DELETE. Và khi bị DELETE thì vẫn cho get ra nha. bạn hãy đọc qua entities của warehouse và nếu thấy có gì thiếu xót hoặc chưa chắn chắn bạn hãy hỏi tôi trước chứ ko được tự ý xử lý nha

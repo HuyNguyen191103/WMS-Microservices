@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import static net.devh.boot.grpc.common.util.InterceptorOrder.ORDER_SECURITY_AUTHENTICATION;
@@ -50,7 +51,20 @@ public class GrpcJwtAuthenticationInterceptor implements AuthenticatingServerInt
 			};
 		}
 
-		UserDetails userDetails = customUserDetailsService.loadUserByUsername(jwtService.extractMail(token));
+		UserDetails userDetails;
+		try {
+			userDetails = customUserDetailsService.loadUserByUsername(jwtService.extractMail(token));
+		} catch (UsernameNotFoundException ex) {
+			call.close(Status.UNAUTHENTICATED.withDescription("Invalid access token"), new Metadata());
+			return new ServerCall.Listener<>() {
+			};
+		}
+		if (!userDetails.isEnabled()) {
+			call.close(Status.PERMISSION_DENIED.withDescription("User is disabled"), new Metadata());
+			return new ServerCall.Listener<>() {
+			};
+		}
+
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
 				userDetails,
 				null,

@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -12,7 +13,7 @@ import {
 import type { ClientGrpc } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
+import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
   ListProductsGrpcResponse,
   ProductGrpc,
@@ -23,15 +24,6 @@ import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
-const CREATE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER', 'EMPLOYEE'];
-const WRITE_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR', 'MANAGER'];
-
-interface AuthenticatedUser {
-  user_id: string;
-  username: string;
-  roles: string[];
-}
-
 @Injectable()
 export class ProductService implements OnModuleInit {
   private readonly logger = new Logger(ProductService.name);
@@ -39,7 +31,6 @@ export class ProductService implements OnModuleInit {
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
-    private readonly authService: AuthService,
   ) {}
 
   onModuleInit() {
@@ -48,10 +39,7 @@ export class ProductService implements OnModuleInit {
     ).getService<ProductGrpcClient>('ProductApi');
   }
 
-  async createProduct(accessToken: string, body: CreateProductDto) {
-    const user = await this.authenticate(accessToken);
-    this.assertRole(user, CREATE_ALLOWED_ROLES);
-
+  async createProduct(user: AuthenticatedUser, body: CreateProductDto) {
     return this.handleGrpcRequest(
       firstValueFrom(
         this.productGrpcClient.createProduct({
@@ -68,9 +56,7 @@ export class ProductService implements OnModuleInit {
     );
   }
 
-  async listProducts(accessToken: string) {
-    await this.authenticate(accessToken);
-
+  async listProducts() {
     const response = await this.handleListGrpcRequest(
       firstValueFrom(this.productGrpcClient.listProducts({})),
     );
@@ -82,22 +68,17 @@ export class ProductService implements OnModuleInit {
     };
   }
 
-  async getProduct(accessToken: string, productId: string) {
-    await this.authenticate(accessToken);
-
+  async getProduct(productId: string) {
     return this.handleGrpcRequest(
       firstValueFrom(this.productGrpcClient.getProduct({ productId })),
     );
   }
 
   async updateProduct(
-    accessToken: string,
+    user: AuthenticatedUser,
     productId: string,
     body: UpdateProductDto,
   ) {
-    const user = await this.authenticate(accessToken);
-    this.assertRole(user, WRITE_ALLOWED_ROLES);
-
     return this.handleGrpcRequest(
       firstValueFrom(
         this.productGrpcClient.updateProduct({
@@ -115,10 +96,7 @@ export class ProductService implements OnModuleInit {
     );
   }
 
-  async deleteProduct(accessToken: string, productId: string) {
-    const user = await this.authenticate(accessToken);
-    this.assertRole(user, WRITE_ALLOWED_ROLES);
-
+  async deleteProduct(user: AuthenticatedUser, productId: string) {
     return this.handleGrpcRequest(
       firstValueFrom(
         this.productGrpcClient.deleteProduct({
@@ -129,18 +107,6 @@ export class ProductService implements OnModuleInit {
         }),
       ),
     );
-  }
-
-  private async authenticate(accessToken: string): Promise<AuthenticatedUser> {
-    return this.authService.validateAccessToken(accessToken);
-  }
-
-  private assertRole(user: AuthenticatedUser, allowedRoles: string[]) {
-    const roles = user.roles.map((role) => role.toUpperCase());
-
-    if (!roles.some((role) => allowedRoles.includes(role))) {
-      throw new ForbiddenException('You do not have permission');
-    }
   }
 
   private getPrimaryRole(user: AuthenticatedUser) {
@@ -205,6 +171,10 @@ export class ProductService implements OnModuleInit {
 
     if (grpcError.code === status.NOT_FOUND) {
       return new NotFoundException(message);
+    }
+
+    if (grpcError.code === status.ALREADY_EXISTS) {
+      return new ConflictException(message);
     }
 
     if (grpcError.code === status.UNAUTHENTICATED) {

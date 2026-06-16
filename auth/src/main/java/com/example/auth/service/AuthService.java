@@ -1,6 +1,8 @@
 package com.example.auth.service;
 
 import com.example.auth.entity.AuthUser;
+import com.example.auth.exception.AuthUserNotFoundException;
+import com.example.auth.exception.MailAlreadyExistsException;
 import com.example.auth.grpc.proto.AuthResponse;
 import com.example.auth.grpc.proto.GetMeResponse;
 import com.example.auth.grpc.proto.LoginRequest;
@@ -11,6 +13,7 @@ import com.example.auth.repository.AuthUserRepository;
 import com.example.auth.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,17 +38,19 @@ public class AuthService {
 
 	@Transactional
 	public RegisterResponse register(RegisterRequest request) {
-		String mail = normalizeMail(request.getMail());
+		String username = requireText(request.getUsername(), "Username is required");
+		String mail = requireText(normalizeMail(request.getMail()), "Mail is required");
+		String password = requireText(request.getPassword(), "Password is required");
 		if (authUserRepository.existsByMail(mail)) {
-			throw new IllegalArgumentException("Mail already exists");
+			throw new MailAlreadyExistsException("Mail already exists");
 		}
 
 		LocalDateTime now = LocalDateTime.now();
 		AuthUser user = new AuthUser();
 		user.setUserId(UUID.randomUUID());
-		user.setUsername(request.getUsername());
+		user.setUsername(username);
 		user.setMail(mail);
-		user.setPassword(passwordEncoder.encode(request.getPassword()));
+		user.setPassword(passwordEncoder.encode(password));
 		user.setStatus(DEFAULT_STATUS);
 		user.setCreatedAt(now);
 		user.setUpdatedAt(now);
@@ -68,13 +73,14 @@ public class AuthService {
 
 	@Transactional(readOnly = true)
 	public AuthResponse login(LoginRequest request) {
-		String mail = normalizeMail(request.getMail());
+		String mail = requireText(normalizeMail(request.getMail()), "Mail is required");
+		String password = requireText(request.getPassword(), "Password is required");
 		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(mail, request.getPassword())
+				new UsernamePasswordAuthenticationToken(mail, password)
 		);
 
 		AuthUser user = authUserRepository.findByMail(authentication.getName())
-				.orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+				.orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 		List<com.example.auth.entity.Role> roles = findRoles(user);
 		List<String> roleNames = roles.stream().map(com.example.auth.entity.Role::getRoleName).toList();
 		String token = jwtService.generateAccessToken(user.getUserId(), user.getUsername(), user.getMail(), roleNames);
@@ -87,7 +93,7 @@ public class AuthService {
 	@Transactional(readOnly = true)
 	public GetMeResponse getMe(UUID userId) {
 		AuthUser user = authUserRepository.findById(userId)
-				.orElseThrow(() -> new IllegalArgumentException("User not found"));
+				.orElseThrow(() -> new AuthUserNotFoundException("User not found"));
 		com.example.auth.entity.UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
 		return GetMeResponse.newBuilder()
 				.setUser(toUserInfo(user, profile, findRoles(user)))
@@ -133,6 +139,13 @@ public class AuthService {
 
 	private String normalizeMail(String mail) {
 		return mail == null ? null : mail.trim().toLowerCase();
+	}
+
+	private String requireText(String value, String message) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(message);
+		}
+		return value;
 	}
 
 	private String nullToEmpty(String value) {

@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WNS Management",
+  title: "WMS Management",
   description: "Warehouse management client",
 };
 

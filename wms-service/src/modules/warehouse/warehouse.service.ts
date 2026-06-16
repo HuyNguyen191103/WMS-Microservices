@@ -43,6 +43,13 @@ export class WarehouseService {
       where: { warehouseCode },
     });
 
+    if (existingWarehouse?.status === ACTIVE_STATUS) {
+      throw new RpcException({
+        code: status.ALREADY_EXISTS,
+        message: 'Warehouse code already exists',
+      });
+    }
+
     const warehouse = existingWarehouse ?? this.warehouseRepository.create();
     warehouse.warehouseCode = warehouseCode;
     warehouse.warehouseName = request.warehouseName ?? request.warehouse_name ?? '';

@@ -4,10 +4,6 @@ import { Observable } from 'rxjs';
 export interface AuthGrpcClient {
   register(request: RegisterGrpcRequest): Observable<RegisterGrpcResponse>;
   login(request: LoginGrpcRequest): Observable<AuthGrpcResponse>;
-  validateAccessToken(
-    request: ValidateAccessTokenGrpcRequest,
-    metadata?: Metadata,
-  ): Observable<ValidateAccessTokenGrpcResponse>;
   getMe(
     request: GetMeGrpcRequest,
     metadata?: Metadata,
@@ -28,8 +24,6 @@ export interface LoginGrpcRequest {
   password: string;
 }
 
-export interface ValidateAccessTokenGrpcRequest {}
-
 export interface GetMeGrpcRequest {}
 
 export interface RegisterGrpcResponse {
@@ -40,15 +34,6 @@ export interface AuthGrpcResponse {
   accessToken?: string;
   access_token?: string;
   expired: number | string;
-}
-
-export interface ValidateAccessTokenGrpcResponse {
-  valid: boolean;
-  userId?: string;
-  user_id?: string;
-  username?: string;
-  mail?: string;
-  roles?: string[];
 }
 
 export interface GetMeGrpcResponse {

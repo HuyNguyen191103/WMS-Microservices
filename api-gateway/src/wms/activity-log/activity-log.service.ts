@@ -11,20 +11,11 @@ import {
 import type { ClientGrpc } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
 import {
   ActivityLogGrpc,
   ActivityLogGrpcClient,
 } from '../grpc/activity-log-grpc.types';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
-
-const READ_ALLOWED_ROLES = ['ADMIN', 'DIRECTOR'];
-
-interface AuthenticatedUser {
-  user_id: string;
-  username: string;
-  roles: string[];
-}
 
 @Injectable()
 export class ActivityLogService implements OnModuleInit {
@@ -33,7 +24,6 @@ export class ActivityLogService implements OnModuleInit {
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
-    private readonly authService: AuthService,
   ) {}
 
   onModuleInit() {
@@ -42,15 +32,13 @@ export class ActivityLogService implements OnModuleInit {
     ).getService<ActivityLogGrpcClient>('ActivityLogApi');
   }
 
-  async listActivityLogs(accessToken: string, page: number) {
-    const user = await this.authService.validateAccessToken(accessToken);
-    this.assertRole(user, READ_ALLOWED_ROLES);
-
+  async listActivityLogs(page: number) {
     try {
       const response = await firstValueFrom(
         this.activityLogGrpcClient.listActivityLogs({ page }),
       );
-      const activityLogs = response.activityLogs ?? response.activity_logs ?? [];
+      const activityLogs =
+        response.activityLogs ?? response.activity_logs ?? [];
 
       return {
         activity_logs: activityLogs.map((activityLog) =>
@@ -65,14 +53,6 @@ export class ActivityLogService implements OnModuleInit {
       };
     } catch (error) {
       throw this.toHttpException(error);
-    }
-  }
-
-  private assertRole(user: AuthenticatedUser, allowedRoles: string[]) {
-    const roles = user.roles.map((role) => role.toUpperCase());
-
-    if (!roles.some((role) => allowedRoles.includes(role))) {
-      throw new ForbiddenException('You do not have permission');
     }
   }
 
