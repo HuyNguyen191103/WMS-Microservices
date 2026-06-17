@@ -98,7 +98,7 @@ export class AuthService implements OnModuleInit {
 
   private toAuthResponse(response: AuthGrpcResponse) {
     return {
-      access_token: response.accessToken ?? response.access_token ?? '',
+      access_token: response.accessToken ?? '',
       expired: Number(response.expired),
     };
   }
@@ -115,7 +115,7 @@ export class AuthService implements OnModuleInit {
     }
 
     return {
-      user_id: user.userId ?? user.user_id ?? '',
+      user_id: user.userId ?? '',
       username: user.username ?? '',
       mail: user.mail ?? '',
       status: user.status ?? '',
@@ -130,8 +130,8 @@ export class AuthService implements OnModuleInit {
     }
 
     return {
-      profile_id: profile.profileId ?? profile.profile_id ?? '',
-      phone_number: profile.phoneNumber ?? profile.phone_number ?? '',
+      profile_id: profile.profileId ?? '',
+      phone_number: profile.phoneNumber ?? '',
       address: profile.address ?? '',
       department: profile.department ?? '',
     };
@@ -139,8 +139,8 @@ export class AuthService implements OnModuleInit {
 
   private toRole(role: RoleGrpc) {
     return {
-      role_id: role.roleId ?? role.role_id ?? '',
-      role_name: role.roleName ?? role.role_name ?? '',
+      role_id: role.roleId ?? '',
+      role_name: role.roleName ?? '',
       description: role.description ?? '',
     };
   }

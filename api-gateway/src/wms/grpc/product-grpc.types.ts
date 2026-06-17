@@ -54,22 +54,16 @@ export interface DeleteProductGrpcRequest {
 
 export interface ProductGrpc {
   productId?: string;
-  product_id?: string;
   sku: string;
   productName?: string;
-  product_name?: string;
   description: string;
   category: string;
   unit: string;
   status: string;
   createdBy?: string;
-  created_by?: string;
   updatedBy?: string;
-  updated_by?: string;
   createdAt?: string;
-  created_at?: string;
   updatedAt?: string;
-  updated_at?: string;
 }
 
 export interface ProductGrpcResponse {

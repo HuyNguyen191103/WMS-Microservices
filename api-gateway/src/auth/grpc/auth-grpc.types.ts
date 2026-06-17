@@ -32,7 +32,6 @@ export interface RegisterGrpcResponse {
 
 export interface AuthGrpcResponse {
   accessToken?: string;
-  access_token?: string;
   expired: number | string;
 }
 
@@ -42,7 +41,6 @@ export interface GetMeGrpcResponse {
 
 export interface UserInfoGrpc {
   userId?: string;
-  user_id?: string;
   username?: string;
   mail?: string;
   status?: string;
@@ -52,17 +50,13 @@ export interface UserInfoGrpc {
 
 export interface UserProfileGrpc {
   profileId?: string;
-  profile_id?: string;
   phoneNumber?: string;
-  phone_number?: string;
   address?: string;
   department?: string;
 }
 
 export interface RoleGrpc {
   roleId?: string;
-  role_id?: string;
   roleName?: string;
-  role_name?: string;
   description?: string;
 }

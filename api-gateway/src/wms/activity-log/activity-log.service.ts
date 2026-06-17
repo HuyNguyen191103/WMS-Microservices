@@ -37,8 +37,7 @@ export class ActivityLogService implements OnModuleInit {
       const response = await firstValueFrom(
         this.activityLogGrpcClient.listActivityLogs({ page }),
       );
-      const activityLogs =
-        response.activityLogs ?? response.activity_logs ?? [];
+      const activityLogs = response.activityLogs ?? [];
 
       return {
         activity_logs: activityLogs.map((activityLog) =>
@@ -46,9 +45,9 @@ export class ActivityLogService implements OnModuleInit {
         ),
         pagination: {
           page: response.page ?? page,
-          page_size: response.pageSize ?? response.page_size ?? 20,
-          total_items: response.totalItems ?? response.total_items ?? 0,
-          total_pages: response.totalPages ?? response.total_pages ?? 0,
+          page_size: response.pageSize ?? 20,
+          total_items: response.totalItems ?? 0,
+          total_pages: response.totalPages ?? 0,
         },
       };
     } catch (error) {
@@ -58,15 +57,14 @@ export class ActivityLogService implements OnModuleInit {
 
   private toActivityLogResponse(activityLog: ActivityLogGrpc) {
     return {
-      log_id: activityLog.logId ?? activityLog.log_id ?? '',
-      user_id: activityLog.userId ?? activityLog.user_id ?? '',
+      log_id: activityLog.logId ?? '',
+      user_id: activityLog.userId ?? '',
       username: activityLog.username,
       action: activityLog.action,
-      reference_type:
-        activityLog.referenceType ?? activityLog.reference_type ?? '',
-      reference_id: activityLog.referenceId ?? activityLog.reference_id ?? '',
+      reference_type: activityLog.referenceType ?? '',
+      reference_id: activityLog.referenceId ?? '',
       description: activityLog.description,
-      created_at: activityLog.createdAt ?? activityLog.created_at ?? '',
+      created_at: activityLog.createdAt ?? '',
     };
   }
 

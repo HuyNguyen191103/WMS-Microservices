@@ -87,38 +87,25 @@ export interface DeleteWarehouseLocationGrpcRequest extends ActorGrpcRequest {
 
 export interface WarehouseGrpc {
   warehouseId?: string;
-  warehouse_id?: string;
   warehouseCode?: string;
-  warehouse_code?: string;
   warehouseName?: string;
-  warehouse_name?: string;
   address: string;
   status: string;
   createdBy?: string;
-  created_by?: string;
   updatedBy?: string;
-  updated_by?: string;
   createdAt?: string;
-  created_at?: string;
   updatedAt?: string;
-  updated_at?: string;
 }
 
 export interface WarehouseLocationGrpc {
   locationId?: string;
-  location_id?: string;
   warehouseId?: string;
-  warehouse_id?: string;
   zone: string;
   status: string;
   createdBy?: string;
-  created_by?: string;
   updatedBy?: string;
-  updated_by?: string;
   createdAt?: string;
-  created_at?: string;
   updatedAt?: string;
-  updated_at?: string;
 }
 
 export interface WarehouseGrpcResponse {

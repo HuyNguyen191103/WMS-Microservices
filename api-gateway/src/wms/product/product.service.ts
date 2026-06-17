@@ -143,17 +143,17 @@ export class ProductService implements OnModuleInit {
     }
 
     return {
-      product_id: product.productId ?? product.product_id ?? '',
+      product_id: product.productId ?? '',
       sku: product.sku,
-      product_name: product.productName ?? product.product_name ?? '',
+      product_name: product.productName ?? '',
       description: product.description,
       category: product.category,
       unit: product.unit,
       status: product.status,
-      created_by: product.createdBy ?? product.created_by ?? '',
-      updated_by: product.updatedBy ?? product.updated_by ?? '',
-      created_at: product.createdAt ?? product.created_at ?? '',
-      updated_at: product.updatedAt ?? product.updated_at ?? '',
+      created_by: product.createdBy ?? '',
+      updated_by: product.updatedBy ?? '',
+      created_at: product.createdAt ?? '',
+      updated_at: product.updatedAt ?? '',
     };
   }
 

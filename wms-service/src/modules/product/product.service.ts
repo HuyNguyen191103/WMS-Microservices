@@ -40,7 +40,7 @@ export class ProductService {
 
     const product = existingProduct ?? this.productRepository.create();
     product.sku = request.sku;
-    product.productName = request.productName ?? request.product_name ?? '';
+    product.productName = request.productName ?? '';
     product.description = request.description || '';
     product.category = request.category || '';
     product.unit = request.unit || '';
@@ -52,7 +52,7 @@ export class ProductService {
 
     const savedProduct = await this.productRepository.save(product);
     await this.activityLogService.createActivityLog({
-      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      userId: request.actorUserId ?? '',
       username: this.getActorUsername(request),
       action: 'PRODUCT_CREATE',
       referenceType: 'PRODUCT',
@@ -84,8 +84,7 @@ export class ProductService {
     const now = new Date();
 
     product.sku = request.sku ?? product.sku;
-    product.productName =
-      request.productName ?? request.product_name ?? product.productName;
+    product.productName = request.productName ?? product.productName;
     product.description =
       request.description === undefined
         ? product.description
@@ -101,7 +100,7 @@ export class ProductService {
 
     const savedProduct = await this.productRepository.save(product);
     await this.activityLogService.createActivityLog({
-      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      userId: request.actorUserId ?? '',
       username: this.getActorUsername(request),
       action: 'PRODUCT_UPDATE',
       referenceType: 'PRODUCT',
@@ -122,7 +121,7 @@ export class ProductService {
 
     const savedProduct = await this.productRepository.save(product);
     await this.activityLogService.createActivityLog({
-      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      userId: request.actorUserId ?? '',
       username: this.getActorUsername(request),
       action: 'PRODUCT_DELETE',
       referenceType: 'PRODUCT',
@@ -167,7 +166,7 @@ export class ProductService {
   }
 
   private getProductId(request: GetProductGrpcRequest): string {
-    const productId = request.productId ?? request.product_id;
+    const productId = request.productId;
 
     if (!productId) {
       throw new RpcException({
@@ -185,7 +184,7 @@ export class ProductService {
       | UpdateProductGrpcRequest
       | DeleteProductGrpcRequest,
   ) {
-    return request.actorUsername ?? request.actor_username ?? '';
+    return request.actorUsername ?? '';
   }
 
   private toGrpcProduct(product: Product): ProductGrpc {

@@ -231,15 +231,15 @@ export class WarehouseService implements OnModuleInit {
     }
 
     return {
-      warehouse_id: warehouse.warehouseId ?? warehouse.warehouse_id ?? '',
-      warehouse_code: warehouse.warehouseCode ?? warehouse.warehouse_code ?? '',
-      warehouse_name: warehouse.warehouseName ?? warehouse.warehouse_name ?? '',
+      warehouse_id: warehouse.warehouseId ?? '',
+      warehouse_code: warehouse.warehouseCode ?? '',
+      warehouse_name: warehouse.warehouseName ?? '',
       address: warehouse.address,
       status: warehouse.status,
-      created_by: warehouse.createdBy ?? warehouse.created_by ?? '',
-      updated_by: warehouse.updatedBy ?? warehouse.updated_by ?? '',
-      created_at: warehouse.createdAt ?? warehouse.created_at ?? '',
-      updated_at: warehouse.updatedAt ?? warehouse.updated_at ?? '',
+      created_by: warehouse.createdBy ?? '',
+      updated_by: warehouse.updatedBy ?? '',
+      created_at: warehouse.createdAt ?? '',
+      updated_at: warehouse.updatedAt ?? '',
     };
   }
 
@@ -249,14 +249,14 @@ export class WarehouseService implements OnModuleInit {
     }
 
     return {
-      location_id: location.locationId ?? location.location_id ?? '',
-      warehouse_id: location.warehouseId ?? location.warehouse_id ?? '',
+      location_id: location.locationId ?? '',
+      warehouse_id: location.warehouseId ?? '',
       zone: location.zone,
       status: location.status,
-      created_by: location.createdBy ?? location.created_by ?? '',
-      updated_by: location.updatedBy ?? location.updated_by ?? '',
-      created_at: location.createdAt ?? location.created_at ?? '',
-      updated_at: location.updatedAt ?? location.updated_at ?? '',
+      created_by: location.createdBy ?? '',
+      updated_by: location.updatedBy ?? '',
+      created_at: location.createdAt ?? '',
+      updated_at: location.updatedAt ?? '',
     };
   }
 
