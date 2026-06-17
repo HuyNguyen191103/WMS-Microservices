@@ -9,40 +9,38 @@ export class Product {
   @PrimaryGeneratedColumn('uuid', { name: 'product_id' })
   productId!: string;
 
-  @Column({ name: 'sku', type: 'varchar', length: 50, nullable: false })
+  @Column({ name: 'sku', length: 50 })
   sku!: string;
 
   @Column({
     name: 'product_name',
-    type: 'varchar',
     length: 255,
-    nullable: false,
   })
   productName!: string;
 
-  @Column({ name: 'description', type: 'text', nullable: true })
-  description!: string | null;
+  @Column({ name: 'description' })
+  description!: string;
 
-  @Column({ name: 'category', type: 'varchar', length: 100, nullable: true })
-  category!: string | null;
+  @Column({ name: 'category', length: 100 })
+  category!: string;
 
-  @Column({ name: 'unit', type: 'varchar', length: 50, nullable: true })
-  unit!: string | null;
+  @Column({ name: 'unit', length: 50 })
+  unit!: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 30, nullable: true })
-  status!: string | null;
+  @Column({ name: 'status', length: 30 })
+  status!: string;
 
-  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
-  createdBy!: string | null;
+  @Column({ name: 'created_by', length: 100 })
+  createdBy!: string;
 
-  @Column({ name: 'updated_by', type: 'varchar', length: 100, nullable: true })
-  updatedBy!: string | null;
+  @Column({ name: 'updated_by', length: 100 })
+  updatedBy!: string;
 
-  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
-  createdAt!: Date | null;
+  @Column({ name: 'created_at' })
+  createdAt!: Date;
 
-  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
-  updatedAt!: Date | null;
+  @Column({ name: 'updated_at' })
+  updatedAt!: Date;
 
   @OneToMany(() => InboundItem, (inboundItem) => inboundItem.product)
   inboundItems!: InboundItem[];

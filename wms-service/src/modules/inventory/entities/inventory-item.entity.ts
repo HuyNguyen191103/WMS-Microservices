@@ -16,20 +16,20 @@ export class InventoryItem {
   @PrimaryGeneratedColumn('uuid', { name: 'inventory_id' })
   inventoryId!: string;
 
-  @Column({ name: 'warehouse_id', type: 'uuid', nullable: false })
+  @Column({ name: 'warehouse_id' })
   warehouseId!: string;
 
-  @Column({ name: 'location_id', type: 'uuid', nullable: false })
+  @Column({ name: 'location_id' })
   locationId!: string;
 
-  @Column({ name: 'product_id', type: 'uuid', nullable: false })
+  @Column({ name: 'product_id' })
   productId!: string;
 
-  @Column({ name: 'quantity', type: 'int4', nullable: true, default: 0 })
-  quantity!: number | null;
+  @Column({ name: 'quantity', default: 0 })
+  quantity!: number;
 
-  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
-  updatedAt!: Date | null;
+  @Column({ name: 'updated_at' })
+  updatedAt!: Date;
 
   @ManyToOne(() => Warehouse, (warehouse) => warehouse.inventoryItems)
   @JoinColumn({ name: 'warehouse_id', referencedColumnName: 'warehouseId' })

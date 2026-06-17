@@ -12,37 +12,33 @@ export class Warehouse {
 
   @Column({
     name: 'warehouse_code',
-    type: 'varchar',
     length: 50,
-    nullable: false,
   })
   warehouseCode!: string;
 
   @Column({
     name: 'warehouse_name',
-    type: 'varchar',
     length: 255,
-    nullable: false,
   })
   warehouseName!: string;
 
-  @Column({ name: 'address', type: 'text', nullable: true })
-  address!: string | null;
+  @Column({ name: 'address' })
+  address!: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 30, nullable: true })
-  status!: string | null;
+  @Column({ name: 'status', length: 30 })
+  status!: string;
 
-  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
-  createdBy!: string | null;
+  @Column({ name: 'created_by', length: 100 })
+  createdBy!: string;
 
-  @Column({ name: 'updated_by', type: 'varchar', length: 100, nullable: true })
-  updatedBy!: string | null;
+  @Column({ name: 'updated_by', length: 100 })
+  updatedBy!: string;
 
-  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
-  createdAt!: Date | null;
+  @Column({ name: 'created_at' })
+  createdAt!: Date;
 
-  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
-  updatedAt!: Date | null;
+  @Column({ name: 'updated_at' })
+  updatedAt!: Date;
 
   @OneToMany(() => WarehouseLocation, (location) => location.warehouse)
   locations!: WarehouseLocation[];

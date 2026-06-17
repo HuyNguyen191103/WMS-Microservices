@@ -14,43 +14,32 @@ export class InboundOrder {
   @PrimaryGeneratedColumn('uuid', { name: 'inbound_order_id' })
   inboundOrderId!: string;
 
-  @Column({ name: 'inbound_no', type: 'varchar', length: 50, nullable: false })
+  @Column({ name: 'inbound_no', length: 50 })
   inboundNo!: string;
 
-  @Column({ name: 'warehouse_id', type: 'uuid', nullable: false })
+  @Column({ name: 'warehouse_id' })
   warehouseId!: string;
 
   @Column({
     name: 'supplier_name',
-    type: 'varchar',
     length: 255,
-    nullable: true,
   })
-  supplierName!: string | null;
+  supplierName!: string;
 
-  @Column({ name: 'expected_date', type: 'date', nullable: true })
-  expectedDate!: Date | null;
+  @Column({ name: 'actual_date' })
+  actualDate!: Date;
 
-  @Column({ name: 'actual_date', type: 'date', nullable: true })
-  actualDate!: Date | null;
+  @Column({ name: 'status', length: 30 })
+  status!: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 30, nullable: true })
-  status!: string | null;
+  @Column({ name: 'created_by', length: 100 })
+  createdBy!: string;
 
-  @Column({ name: 'approved_by', type: 'varchar', length: 100, nullable: true })
-  approvedBy!: string | null;
+  @Column({ name: 'created_at' })
+  createdAt!: Date;
 
-  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
-  approvedAt!: Date | null;
-
-  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
-  createdBy!: string | null;
-
-  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
-  createdAt!: Date | null;
-
-  @Column({ name: 'updated_at', type: 'timestamp', nullable: true })
-  updatedAt!: Date | null;
+  @Column({ name: 'updated_at' })
+  updatedAt!: Date;
 
   @ManyToOne(() => Warehouse, (warehouse) => warehouse.inboundOrders)
   @JoinColumn({ name: 'warehouse_id', referencedColumnName: 'warehouseId' })

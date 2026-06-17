@@ -3,7 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActivityLog } from '../activity-log/entities/activity-log.entity';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { Product } from './entities/product.entity';
 import {
   CreateProductGrpcRequest,
@@ -21,8 +21,7 @@ export class ProductService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-    @InjectRepository(ActivityLog)
-    private readonly activityLogRepository: Repository<ActivityLog>,
+    private readonly activityLogService: ActivityLogService,
   ) {}
 
   async createProduct(request: CreateProductGrpcRequest) {
@@ -42,9 +41,9 @@ export class ProductService {
     const product = existingProduct ?? this.productRepository.create();
     product.sku = request.sku;
     product.productName = request.productName ?? request.product_name ?? '';
-    product.description = request.description || null;
-    product.category = request.category || null;
-    product.unit = request.unit || null;
+    product.description = request.description || '';
+    product.category = request.category || '';
+    product.unit = request.unit || '';
     product.status = ACTIVE_STATUS;
     product.createdBy = actorUsername;
     product.updatedBy = actorUsername;
@@ -52,14 +51,16 @@ export class ProductService {
     product.updatedAt = now;
 
     const savedProduct = await this.productRepository.save(product);
-    await this.createActivityLog(
-      request,
-      'PRODUCT_CREATE',
-      savedProduct.productId,
-      existingProduct
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'PRODUCT_CREATE',
+      referenceType: 'PRODUCT',
+      referenceId: savedProduct.productId,
+      description: existingProduct
         ? `Overwrote product ${savedProduct.sku}`
         : `Created product ${savedProduct.sku}`,
-    );
+    });
 
     return { product: this.toGrpcProduct(savedProduct) };
   }
@@ -86,20 +87,27 @@ export class ProductService {
     product.productName =
       request.productName ?? request.product_name ?? product.productName;
     product.description =
-      request.description === undefined ? product.description : request.description || null;
+      request.description === undefined
+        ? product.description
+        : request.description || '';
     product.category =
-      request.category === undefined ? product.category : request.category || null;
-    product.unit = request.unit === undefined ? product.unit : request.unit || null;
+      request.category === undefined
+        ? product.category
+        : request.category || '';
+    product.unit =
+      request.unit === undefined ? product.unit : request.unit || '';
     product.updatedBy = this.getActorUsername(request);
     product.updatedAt = now;
 
     const savedProduct = await this.productRepository.save(product);
-    await this.createActivityLog(
-      request,
-      'PRODUCT_UPDATE',
-      savedProduct.productId,
-      `Updated product ${savedProduct.sku}`,
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'PRODUCT_UPDATE',
+      referenceType: 'PRODUCT',
+      referenceId: savedProduct.productId,
+      description: `Updated product ${savedProduct.sku}`,
+    });
 
     return { product: this.toGrpcProduct(savedProduct) };
   }
@@ -113,12 +121,14 @@ export class ProductService {
     product.updatedAt = now;
 
     const savedProduct = await this.productRepository.save(product);
-    await this.createActivityLog(
-      request,
-      'PRODUCT_DELETE',
-      savedProduct.productId,
-      `Deleted product ${savedProduct.sku}`,
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'PRODUCT_DELETE',
+      referenceType: 'PRODUCT',
+      referenceId: savedProduct.productId,
+      description: `Deleted product ${savedProduct.sku}`,
+    });
 
     return { product: this.toGrpcProduct(savedProduct) };
   }
@@ -156,28 +166,6 @@ export class ProductService {
     return product;
   }
 
-  private async createActivityLog(
-    request:
-      | CreateProductGrpcRequest
-      | UpdateProductGrpcRequest
-      | DeleteProductGrpcRequest,
-    action: string,
-    referenceId: string,
-    description: string,
-  ) {
-    await this.activityLogRepository.save(
-      this.activityLogRepository.create({
-        userId: request.actorUserId ?? request.actor_user_id ?? null,
-        username: this.getActorUsername(request),
-        action,
-        referenceType: 'PRODUCT',
-        referenceId,
-        description,
-        createdAt: new Date(),
-      }),
-    );
-  }
-
   private getProductId(request: GetProductGrpcRequest): string {
     const productId = request.productId ?? request.product_id;
 
@@ -197,7 +185,7 @@ export class ProductService {
       | UpdateProductGrpcRequest
       | DeleteProductGrpcRequest,
   ) {
-    return request.actorUsername ?? request.actor_username ?? null;
+    return request.actorUsername ?? request.actor_username ?? '';
   }
 
   private toGrpcProduct(product: Product): ProductGrpc {

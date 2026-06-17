@@ -1,10 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { ActivityLog } from './entities/activity-log.entity';
 import { ActivityLogGrpc } from './grpc/activity-log-grpc.types';
 
 const PAGE_SIZE = 20;
+
+export interface CreateActivityLogRequest {
+  userId: string;
+  username: string;
+  action: string;
+  referenceType: string;
+  referenceId: string;
+  description: string;
+}
 
 @Injectable()
 export class ActivityLogService {
@@ -12,6 +21,30 @@ export class ActivityLogService {
     @InjectRepository(ActivityLog)
     private readonly activityLogRepository: Repository<ActivityLog>,
   ) {}
+
+  async createActivityLog(
+    request: CreateActivityLogRequest,
+    manager?: EntityManager,
+  ) {
+    const activityLogData = {
+      userId: request.userId,
+      username: request.username,
+      action: request.action,
+      referenceType: request.referenceType,
+      referenceId: request.referenceId,
+      description: request.description,
+      createdAt: new Date(),
+    };
+
+    if (manager) {
+      await manager.save(manager.create(ActivityLog, activityLogData));
+      return;
+    }
+
+    await this.activityLogRepository.save(
+      this.activityLogRepository.create(activityLogData),
+    );
+  }
 
   async listActivityLogs(page = 1) {
     const currentPage = page > 0 ? page : 1;

@@ -14,34 +14,32 @@ export class InventoryTransaction {
   @PrimaryGeneratedColumn('uuid', { name: 'transaction_id' })
   transactionId!: string;
 
-  @Column({ name: 'product_id', type: 'uuid', nullable: false })
+  @Column({ name: 'product_id' })
   productId!: string;
 
-  @Column({ name: 'warehouse_id', type: 'uuid', nullable: false })
+  @Column({ name: 'warehouse_id' })
   warehouseId!: string;
 
-  @Column({ name: 'location_id', type: 'uuid', nullable: true })
-  locationId!: string | null;
+  @Column({ name: 'location_id' })
+  locationId!: string;
 
   @Column({
     name: 'transaction_type',
-    type: 'varchar',
     length: 30,
-    nullable: true,
   })
-  transactionType!: string | null;
+  transactionType!: string;
 
-  @Column({ name: 'quantity', type: 'int4', nullable: true })
-  quantity!: number | null;
+  @Column({ name: 'quantity' })
+  quantity!: number;
 
-  @Column({ name: 'reference_no', type: 'varchar', length: 50, nullable: true })
-  referenceNo!: string | null;
+  @Column({ name: 'reference_no', length: 50 })
+  referenceNo!: string;
 
-  @Column({ name: 'created_by', type: 'varchar', length: 100, nullable: true })
-  createdBy!: string | null;
+  @Column({ name: 'created_by', length: 100 })
+  createdBy!: string;
 
-  @Column({ name: 'created_at', type: 'timestamp', nullable: true })
-  createdAt!: Date | null;
+  @Column({ name: 'created_at' })
+  createdAt!: Date;
 
   @ManyToOne(() => Product, (product) => product.inventoryTransactions)
   @JoinColumn({ name: 'product_id', referencedColumnName: 'productId' })
@@ -51,7 +49,10 @@ export class InventoryTransaction {
   @JoinColumn({ name: 'warehouse_id', referencedColumnName: 'warehouseId' })
   warehouse!: Warehouse;
 
-  @ManyToOne(() => WarehouseLocation, (location) => location.inventoryTransactions)
+  @ManyToOne(
+    () => WarehouseLocation,
+    (location) => location.inventoryTransactions,
+  )
   @JoinColumn({ name: 'location_id', referencedColumnName: 'locationId' })
-  location!: WarehouseLocation | null;
+  location!: WarehouseLocation;
 }

@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActivityLog } from '../activity-log/entities/activity-log.entity';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { WarehouseLocation } from './entities/warehouse-location.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import {
@@ -31,8 +31,7 @@ export class WarehouseService {
     private readonly warehouseRepository: Repository<Warehouse>,
     @InjectRepository(WarehouseLocation)
     private readonly locationRepository: Repository<WarehouseLocation>,
-    @InjectRepository(ActivityLog)
-    private readonly activityLogRepository: Repository<ActivityLog>,
+    private readonly activityLogService: ActivityLogService,
   ) {}
 
   async createWarehouse(request: CreateWarehouseGrpcRequest) {
@@ -52,8 +51,9 @@ export class WarehouseService {
 
     const warehouse = existingWarehouse ?? this.warehouseRepository.create();
     warehouse.warehouseCode = warehouseCode;
-    warehouse.warehouseName = request.warehouseName ?? request.warehouse_name ?? '';
-    warehouse.address = request.address || null;
+    warehouse.warehouseName =
+      request.warehouseName ?? request.warehouse_name ?? '';
+    warehouse.address = request.address || '';
     warehouse.status = ACTIVE_STATUS;
     warehouse.createdBy = actorUsername;
     warehouse.updatedBy = actorUsername;
@@ -62,15 +62,16 @@ export class WarehouseService {
 
     const savedWarehouse = await this.warehouseRepository.save(warehouse);
 
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_CREATE',
-      savedWarehouse.warehouseId,
-      existingWarehouse
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_CREATE',
+      referenceType: 'WAREHOUSE',
+      referenceId: savedWarehouse.warehouseId,
+      description: existingWarehouse
         ? `Overwrote warehouse ${savedWarehouse.warehouseCode}`
         : `Created warehouse ${savedWarehouse.warehouseCode}`,
-      'WAREHOUSE',
-    );
+    });
 
     return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
   }
@@ -98,22 +99,27 @@ export class WarehouseService {
     const now = new Date();
 
     warehouse.warehouseCode =
-      request.warehouseCode ?? request.warehouse_code ?? warehouse.warehouseCode;
+      request.warehouseCode ??
+      request.warehouse_code ??
+      warehouse.warehouseCode;
     warehouse.warehouseName =
-      request.warehouseName ?? request.warehouse_name ?? warehouse.warehouseName;
+      request.warehouseName ??
+      request.warehouse_name ??
+      warehouse.warehouseName;
     warehouse.address =
-      request.address === undefined ? warehouse.address : request.address || null;
+      request.address === undefined ? warehouse.address : request.address || '';
     warehouse.updatedBy = this.getActorUsername(request);
     warehouse.updatedAt = now;
 
     const savedWarehouse = await this.warehouseRepository.save(warehouse);
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_UPDATE',
-      savedWarehouse.warehouseId,
-      `Updated warehouse ${savedWarehouse.warehouseCode}`,
-      'WAREHOUSE',
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_UPDATE',
+      referenceType: 'WAREHOUSE',
+      referenceId: savedWarehouse.warehouseId,
+      description: `Updated warehouse ${savedWarehouse.warehouseCode}`,
+    });
 
     return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
   }
@@ -127,13 +133,14 @@ export class WarehouseService {
     warehouse.updatedAt = now;
 
     const savedWarehouse = await this.warehouseRepository.save(warehouse);
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_DELETE',
-      savedWarehouse.warehouseId,
-      `Deleted warehouse ${savedWarehouse.warehouseCode}`,
-      'WAREHOUSE',
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_DELETE',
+      referenceType: 'WAREHOUSE',
+      referenceId: savedWarehouse.warehouseId,
+      description: `Deleted warehouse ${savedWarehouse.warehouseCode}`,
+    });
 
     return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
   }
@@ -146,7 +153,7 @@ export class WarehouseService {
     const actorUsername = this.getActorUsername(request);
     const location = this.locationRepository.create({
       warehouseId,
-      zone: request.zone || null,
+      zone: request.zone || '',
       status: ACTIVE_STATUS,
       createdBy: actorUsername,
       updatedBy: actorUsername,
@@ -155,13 +162,14 @@ export class WarehouseService {
     });
     const savedLocation = await this.locationRepository.save(location);
 
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_LOCATION_CREATE',
-      savedLocation.locationId,
-      `Created warehouse location ${savedLocation.zone ?? ''}`,
-      'WAREHOUSE_LOCATION',
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_LOCATION_CREATE',
+      referenceType: 'WAREHOUSE_LOCATION',
+      referenceId: savedLocation.locationId,
+      description: `Created warehouse location ${savedLocation.zone ?? ''}`,
+    });
 
     return { location: this.toGrpcWarehouseLocation(savedLocation) };
   }
@@ -181,50 +189,59 @@ export class WarehouseService {
   }
 
   async getWarehouseLocation(request: GetWarehouseLocationGrpcRequest) {
-    const location = await this.findWarehouseLocation(this.getLocationId(request));
+    const location = await this.findWarehouseLocation(
+      this.getLocationId(request),
+    );
 
     return { location: this.toGrpcWarehouseLocation(location) };
   }
 
   async updateWarehouseLocation(request: UpdateWarehouseLocationGrpcRequest) {
-    const location = await this.findWarehouseLocation(this.getLocationId(request));
+    const location = await this.findWarehouseLocation(
+      this.getLocationId(request),
+    );
     const warehouseId = request.warehouseId ?? request.warehouse_id;
     if (warehouseId) {
       await this.findWarehouse(warehouseId);
       location.warehouseId = warehouseId;
     }
 
-    location.zone = request.zone === undefined ? location.zone : request.zone || null;
+    location.zone =
+      request.zone === undefined ? location.zone : request.zone || '';
     location.updatedBy = this.getActorUsername(request);
     location.updatedAt = new Date();
 
     const savedLocation = await this.locationRepository.save(location);
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_LOCATION_UPDATE',
-      savedLocation.locationId,
-      `Updated warehouse location ${savedLocation.zone ?? ''}`,
-      'WAREHOUSE_LOCATION',
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_LOCATION_UPDATE',
+      referenceType: 'WAREHOUSE_LOCATION',
+      referenceId: savedLocation.locationId,
+      description: `Updated warehouse location ${savedLocation.zone ?? ''}`,
+    });
 
     return { location: this.toGrpcWarehouseLocation(savedLocation) };
   }
 
   async deleteWarehouseLocation(request: DeleteWarehouseLocationGrpcRequest) {
-    const location = await this.findWarehouseLocation(this.getLocationId(request));
+    const location = await this.findWarehouseLocation(
+      this.getLocationId(request),
+    );
 
     location.status = DELETED_STATUS;
     location.updatedBy = this.getActorUsername(request);
     location.updatedAt = new Date();
 
     const savedLocation = await this.locationRepository.save(location);
-    await this.createActivityLog(
-      request,
-      'WAREHOUSE_LOCATION_DELETE',
-      savedLocation.locationId,
-      `Deleted warehouse location ${savedLocation.zone ?? ''}`,
-      'WAREHOUSE_LOCATION',
-    );
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? request.actor_user_id ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_LOCATION_DELETE',
+      referenceType: 'WAREHOUSE_LOCATION',
+      referenceId: savedLocation.locationId,
+      description: `Deleted warehouse location ${savedLocation.zone ?? ''}`,
+    });
 
     return { location: this.toGrpcWarehouseLocation(savedLocation) };
   }
@@ -257,26 +274,6 @@ export class WarehouseService {
     }
 
     return location;
-  }
-
-  private async createActivityLog(
-    request: ActorGrpcRequest,
-    action: string,
-    referenceId: string,
-    description: string,
-    referenceType: string,
-  ) {
-    await this.activityLogRepository.save(
-      this.activityLogRepository.create({
-        userId: request.actorUserId ?? request.actor_user_id ?? null,
-        username: this.getActorUsername(request),
-        action,
-        referenceType,
-        referenceId,
-        description,
-        createdAt: new Date(),
-      }),
-    );
   }
 
   private getWarehouseId(
@@ -317,7 +314,7 @@ export class WarehouseService {
   }
 
   private getActorUsername(request: ActorGrpcRequest) {
-    return request.actorUsername ?? request.actor_username ?? null;
+    return request.actorUsername ?? request.actor_username ?? '';
   }
 
   private toGrpcWarehouse(warehouse: Warehouse): WarehouseGrpc {

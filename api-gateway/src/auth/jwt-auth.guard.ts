@@ -2,7 +2,6 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -30,7 +29,6 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  private readonly logger = new Logger(JwtAuthGuard.name);
   private publicKey?: string;
 
   constructor(private readonly configService: ConfigService) {}
@@ -94,7 +92,7 @@ export class JwtAuthGuard implements CanActivate {
         roles: this.toRoles(payload.roles),
       };
     } catch (error) {
-      this.logger.warn(`JWT verification failed: ${this.errorMessage(error)}`);
+      console.error(`JWT verification error: ${this.errorMessage(error)}`);
       throw new UnauthorizedException('Invalid access token');
     }
   }
@@ -134,10 +132,6 @@ export class JwtAuthGuard implements CanActivate {
 
     if (typeof payload.exp !== 'number' || payload.exp <= now) {
       throw new Error('JWT is expired');
-    }
-
-    if (typeof payload.nbf === 'number' && payload.nbf > now) {
-      throw new Error('JWT is not active yet');
     }
   }
 

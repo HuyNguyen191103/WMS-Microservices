@@ -13,17 +13,17 @@ export class OutboundItem {
   @PrimaryGeneratedColumn('uuid', { name: 'outbound_item_id' })
   outboundItemId!: string;
 
-  @Column({ name: 'outbound_order_id', type: 'uuid', nullable: false })
+  @Column({ name: 'outbound_order_id' })
   outboundOrderId!: string;
 
-  @Column({ name: 'product_id', type: 'uuid', nullable: false })
+  @Column({ name: 'product_id' })
   productId!: string;
 
-  @Column({ name: 'requested_qty', type: 'int4', nullable: true })
-  requestedQty!: number | null;
+  @Column({ name: 'requested_qty' })
+  requestedQty!: number;
 
-  @Column({ name: 'actual_qty', type: 'int4', nullable: true })
-  actualQty!: number | null;
+  @Column({ name: 'actual_qty' })
+  actualQty!: number;
 
   @ManyToOne(() => OutboundOrder, (outboundOrder) => outboundOrder.items)
   @JoinColumn({

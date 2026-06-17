@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,9 @@ type ConfirmDialogProps = {
   title: string;
   description: string;
   isSubmitting?: boolean;
+  confirmText?: string;
+  submittingText?: string;
+  confirmVariant?: ButtonProps["variant"];
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 };
@@ -24,6 +27,9 @@ export function ConfirmDialog({
   title,
   description,
   isSubmitting,
+  confirmText = "Delete",
+  submittingText = "Deleting...",
+  confirmVariant = "destructive",
   onOpenChange,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -38,8 +44,8 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="destructive" disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? "Deleting..." : "Delete"}
+          <Button variant={confirmVariant} disabled={isSubmitting} onClick={onConfirm}>
+            {isSubmitting ? submittingText : confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -14,20 +14,17 @@ export class InboundItem {
   @PrimaryGeneratedColumn('uuid', { name: 'inbound_item_id' })
   inboundItemId!: string;
 
-  @Column({ name: 'inbound_order_id', type: 'uuid', nullable: false })
+  @Column({ name: 'inbound_order_id' })
   inboundOrderId!: string;
 
-  @Column({ name: 'product_id', type: 'uuid', nullable: false })
+  @Column({ name: 'product_id' })
   productId!: string;
 
-  @Column({ name: 'location_id', type: 'uuid', nullable: false })
+  @Column({ name: 'location_id' })
   locationId!: string;
 
-  @Column({ name: 'expected_qty', type: 'int4', nullable: true })
-  expectedQty!: number | null;
-
-  @Column({ name: 'actual_qty', type: 'int4', nullable: true })
-  actualQty!: number | null;
+  @Column({ name: 'actual_qty' })
+  actualQty!: number;
 
   @ManyToOne(() => InboundOrder, (inboundOrder) => inboundOrder.items)
   @JoinColumn({

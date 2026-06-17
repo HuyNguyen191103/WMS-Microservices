@@ -1,10 +1,5 @@
-import { ComingSoonPage } from "@/components/pages/coming-soon-page";
+import { InboundPage } from "@/components/pages/inbound-page";
 
 export default function Page() {
-  return (
-    <ComingSoonPage
-      title="Inbound"
-      description="Prepare receiving workflows while inbound APIs are being added to the gateway."
-    />
-  );
+  return <InboundPage />;
 }
