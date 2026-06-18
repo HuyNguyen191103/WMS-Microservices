@@ -11,11 +11,12 @@ import com.example.auth.grpc.proto.RegisterResponse;
 import com.example.auth.grpc.proto.UserInfo;
 import com.example.auth.repository.AuthUserRepository;
 import com.example.auth.repository.UserProfileRepository;
+import com.example.auth.security.CustomUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,11 +80,16 @@ public class AuthService {
 				new UsernamePasswordAuthenticationToken(mail, password)
 		);
 
-		AuthUser user = authUserRepository.findByMail(authentication.getName())
-				.orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
-		List<com.example.auth.entity.Role> roles = findRoles(user);
-		List<String> roleNames = roles.stream().map(com.example.auth.entity.Role::getRoleName).toList();
-		String token = jwtService.generateAccessToken(user.getUserId(), user.getUsername(), user.getMail(), roleNames);
+		CustomUserPrincipal principal = (CustomUserPrincipal) authentication.getPrincipal();
+		List<String> roleNames = principal.getAuthorities().stream()
+				.map(GrantedAuthority::getAuthority)
+				.toList();
+		String token = jwtService.generateAccessToken(
+				principal.getUserId(),
+				principal.getDisplayUsername(),
+				principal.getMail(),
+				roleNames
+		);
 		return AuthResponse.newBuilder()
 				.setAccessToken(token)
 				.setExpired(jwtService.getExpired())

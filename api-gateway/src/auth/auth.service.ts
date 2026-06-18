@@ -75,13 +75,13 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  async getMe(accessToken: string) {
+  async getMe(userId: string, authorization: string) {
     try {
       const metadata = new Metadata();
-      metadata.set('authorization', `Bearer ${accessToken}`);
+      metadata.set('authorization', authorization);
 
       const response = await firstValueFrom(
-        this.authGrpcClient.getMe({}, metadata),
+        this.authGrpcClient.getMe({ userId }, metadata),
       );
 
       return this.toGetMeResponse(response);

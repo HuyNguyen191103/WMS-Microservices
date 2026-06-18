@@ -24,7 +24,9 @@ export interface LoginGrpcRequest {
   password: string;
 }
 
-export interface GetMeGrpcRequest {}
+export interface GetMeGrpcRequest {
+  userId: string;
+}
 
 export interface RegisterGrpcResponse {
   user?: UserInfoGrpc;

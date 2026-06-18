@@ -9,7 +9,6 @@ import com.example.auth.grpc.proto.GetMeResponse;
 import com.example.auth.grpc.proto.LoginRequest;
 import com.example.auth.grpc.proto.RegisterRequest;
 import com.example.auth.grpc.proto.RegisterResponse;
-import com.example.auth.security.CustomUserPrincipal;
 import com.example.auth.service.AuthService;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -18,13 +17,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.AccountStatusException;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 @GrpcService
@@ -46,7 +42,7 @@ public class AuthGrpcService extends AuthApiGrpc.AuthApiImplBase {
 
 	@Override
 	public void getMe(GetMeRequest request, StreamObserver<GetMeResponse> responseObserver) {
-		unary(responseObserver, () -> authService.getMe(currentPrincipal().getUserId()));
+		unary(responseObserver, () -> authService.getMe(UUID.fromString(request.getUserId())));
 	}
 
 	private <T> void unary(StreamObserver<T> responseObserver, Supplier<T> handler) {
@@ -57,14 +53,6 @@ public class AuthGrpcService extends AuthApiGrpc.AuthApiImplBase {
 		} catch (Exception ex) {
 			responseObserver.onError(toStatusRuntimeException(ex));
 		}
-	}
-
-	private CustomUserPrincipal currentPrincipal() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserPrincipal principal)) {
-			throw new AuthenticationCredentialsNotFoundException("Missing authenticated principal");
-		}
-		return principal;
 	}
 
 	private StatusRuntimeException toStatusRuntimeException(Exception ex) {
