@@ -8,6 +8,8 @@ const PROTECTED_ROUTES = [
   "/activity-logs",
   "/inbound",
   "/outbound",
+  "/inventory-items",
+  "/inventory-transactions",
 ];
 
 const API_BASE_URL =
@@ -31,7 +33,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (pathname.startsWith("/activity-logs")) {
+  if (
+    pathname.startsWith("/activity-logs") ||
+    pathname.startsWith("/inventory-transactions")
+  ) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
@@ -50,7 +55,11 @@ export async function proxy(request: NextRequest) {
         (role.role_name ?? "").toUpperCase(),
       );
 
-      if (!roles.some((role) => ["ADMIN", "DIRECTOR"].includes(role))) {
+      const allowedRoles = pathname.startsWith("/activity-logs")
+        ? ["ADMIN", "DIRECTOR"]
+        : ["ADMIN", "DIRECTOR", "MANAGER"];
+
+      if (!roles.some((role) => allowedRoles.includes(role))) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
     } catch {
@@ -70,5 +79,7 @@ export const config = {
     "/activity-logs/:path*",
     "/inbound/:path*",
     "/outbound/:path*",
+    "/inventory-items/:path*",
+    "/inventory-transactions/:path*",
   ],
 };

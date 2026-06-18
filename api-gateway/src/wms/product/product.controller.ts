@@ -65,4 +65,13 @@ export class ProductController {
   ) {
     return this.productService.deleteProduct(user, productId);
   }
+
+  @Patch(':productId/restore')
+  @Roles(...WRITE_ALLOWED_ROLES)
+  restoreProduct(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('productId') productId: string,
+  ) {
+    return this.productService.restoreProduct(user, productId);
+  }
 }

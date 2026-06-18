@@ -10,6 +10,7 @@ import {
   DeleteProductGrpcRequest,
   GetProductGrpcRequest,
   ProductGrpc,
+  RestoreProductGrpcRequest,
   UpdateProductGrpcRequest,
 } from './grpc/product-grpc.types';
 
@@ -31,14 +32,17 @@ export class ProductService {
       where: { sku: request.sku },
     });
 
-    if (existingProduct?.status === ACTIVE_STATUS) {
+    if (existingProduct) {
       throw new RpcException({
         code: status.ALREADY_EXISTS,
-        message: 'Product SKU already exists',
+        message:
+          existingProduct.status === DELETED_STATUS
+            ? 'Product SKU belongs to a deleted product; restore it instead'
+            : 'Product SKU already exists',
       });
     }
 
-    const product = existingProduct ?? this.productRepository.create();
+    const product = this.productRepository.create();
     product.sku = request.sku;
     product.productName = request.productName ?? '';
     product.description = request.description || '';
@@ -132,6 +136,27 @@ export class ProductService {
     return { product: this.toGrpcProduct(savedProduct) };
   }
 
+  async restoreProduct(request: RestoreProductGrpcRequest) {
+    const product = await this.findDeletedProduct(this.getProductId(request));
+    const now = new Date();
+
+    product.status = ACTIVE_STATUS;
+    product.updatedBy = this.getActorUsername(request);
+    product.updatedAt = now;
+
+    const savedProduct = await this.productRepository.save(product);
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? '',
+      username: this.getActorUsername(request),
+      action: 'PRODUCT_RESTORE',
+      referenceType: 'PRODUCT',
+      referenceId: savedProduct.productId,
+      description: `Restored product ${savedProduct.sku}`,
+    });
+
+    return { product: this.toGrpcProduct(savedProduct) };
+  }
+
   private async findActiveProduct(productId: string) {
     const product = await this.productRepository.findOne({
       where: {
@@ -165,7 +190,26 @@ export class ProductService {
     return product;
   }
 
-  private getProductId(request: GetProductGrpcRequest): string {
+  private async findDeletedProduct(productId: string) {
+    const product = await this.findProduct(productId);
+
+    if (product.status !== DELETED_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Only deleted products can be restored',
+      });
+    }
+
+    return product;
+  }
+
+  private getProductId(
+    request:
+      | GetProductGrpcRequest
+      | UpdateProductGrpcRequest
+      | DeleteProductGrpcRequest
+      | RestoreProductGrpcRequest,
+  ): string {
     const productId = request.productId;
 
     if (!productId) {
@@ -182,7 +226,8 @@ export class ProductService {
     request:
       | CreateProductGrpcRequest
       | UpdateProductGrpcRequest
-      | DeleteProductGrpcRequest,
+      | DeleteProductGrpcRequest
+      | RestoreProductGrpcRequest,
   ) {
     return request.actorUsername ?? '';
   }

@@ -69,6 +69,15 @@ export async function deleteWarehouse(warehouseId: string) {
   );
 }
 
+export async function restoreWarehouse(warehouseId: string) {
+  return apiRequest<{ warehouse: Warehouse | null }>(
+    `/api/warehouses/${warehouseId}/restore`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
 export async function listWarehouseLocations(warehouseId?: string) {
   const query = warehouseId ? `?warehouseId=${encodeURIComponent(warehouseId)}` : "";
   const response = await apiRequest<{ locations: WarehouseLocation[] }>(
@@ -105,6 +114,15 @@ export async function deleteWarehouseLocation(locationId: string) {
     `/api/warehouse-locations/${locationId}`,
     {
       method: "DELETE",
+    },
+  );
+}
+
+export async function restoreWarehouseLocation(locationId: string) {
+  return apiRequest<{ location: WarehouseLocation | null }>(
+    `/api/warehouse-locations/${locationId}/restore`,
+    {
+      method: "PATCH",
     },
   );
 }

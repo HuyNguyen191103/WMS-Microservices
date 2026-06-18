@@ -65,6 +65,15 @@ export class WarehouseController {
     return this.warehouseService.deleteWarehouse(user, warehouseId);
   }
 
+  @Patch('api/warehouses/:warehouseId/restore')
+  @Roles(...WRITE_ALLOWED_ROLES)
+  restoreWarehouse(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('warehouseId') warehouseId: string,
+  ) {
+    return this.warehouseService.restoreWarehouse(user, warehouseId);
+  }
+
   @Post('api/warehouse-locations')
   @Roles(...WRITE_ALLOWED_ROLES)
   createWarehouseLocation(
@@ -105,5 +114,14 @@ export class WarehouseController {
     @Param('locationId') locationId: string,
   ) {
     return this.warehouseService.deleteWarehouseLocation(user, locationId);
+  }
+
+  @Patch('api/warehouse-locations/:locationId/restore')
+  @Roles(...WRITE_ALLOWED_ROLES)
+  restoreWarehouseLocation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('locationId') locationId: string,
+  ) {
+    return this.warehouseService.restoreWarehouseLocation(user, locationId);
   }
 }

@@ -104,6 +104,17 @@ export class WarehouseService implements OnModuleInit {
     );
   }
 
+  async restoreWarehouse(user: AuthenticatedUser, warehouseId: string) {
+    return this.handleWarehouseGrpcRequest(
+      firstValueFrom(
+        this.warehouseGrpcClient.restoreWarehouse({
+          warehouseId,
+          ...this.toActorRequest(user),
+        }),
+      ),
+    );
+  }
+
   async createWarehouseLocation(
     user: AuthenticatedUser,
     body: CreateWarehouseLocationDto,
@@ -162,6 +173,17 @@ export class WarehouseService implements OnModuleInit {
     return this.handleWarehouseLocationGrpcRequest(
       firstValueFrom(
         this.warehouseGrpcClient.deleteWarehouseLocation({
+          locationId,
+          ...this.toActorRequest(user),
+        }),
+      ),
+    );
+  }
+
+  async restoreWarehouseLocation(user: AuthenticatedUser, locationId: string) {
+    return this.handleWarehouseLocationGrpcRequest(
+      firstValueFrom(
+        this.warehouseGrpcClient.restoreWarehouseLocation({
           locationId,
           ...this.toActorRequest(user),
         }),

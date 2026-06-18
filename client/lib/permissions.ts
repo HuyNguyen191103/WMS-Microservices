@@ -2,6 +2,11 @@ import type { UserInfo } from "@/lib/auth-api";
 import { hasAnyRole } from "@/lib/session";
 
 export const ACTIVITY_LOG_READ_ROLES = ["ADMIN", "DIRECTOR"];
+export const INVENTORY_TRANSACTION_READ_ROLES = [
+  "ADMIN",
+  "DIRECTOR",
+  "MANAGER",
+];
 export const PRODUCT_CREATE_ROLES = [
   "ADMIN",
   "DIRECTOR",
@@ -26,6 +31,10 @@ export const INBOUND_COMPLETE_ROLES = [
 
 export function canReadActivityLogs(user: UserInfo | null) {
   return hasAnyRole(user, ACTIVITY_LOG_READ_ROLES);
+}
+
+export function canReadInventoryTransactions(user: UserInfo | null) {
+  return hasAnyRole(user, INVENTORY_TRANSACTION_READ_ROLES);
 }
 
 export function canCreateProduct(user: UserInfo | null) {

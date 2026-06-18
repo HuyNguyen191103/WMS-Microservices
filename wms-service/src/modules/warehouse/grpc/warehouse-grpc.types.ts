@@ -27,6 +27,10 @@ export interface DeleteWarehouseGrpcRequest extends ActorGrpcRequest {
   warehouseId?: string;
 }
 
+export interface RestoreWarehouseGrpcRequest extends ActorGrpcRequest {
+  warehouseId?: string;
+}
+
 export interface CreateWarehouseLocationGrpcRequest extends ActorGrpcRequest {
   warehouseId?: string;
   zone?: string;
@@ -47,6 +51,10 @@ export interface UpdateWarehouseLocationGrpcRequest extends ActorGrpcRequest {
 }
 
 export interface DeleteWarehouseLocationGrpcRequest extends ActorGrpcRequest {
+  locationId?: string;
+}
+
+export interface RestoreWarehouseLocationGrpcRequest extends ActorGrpcRequest {
   locationId?: string;
 }
 

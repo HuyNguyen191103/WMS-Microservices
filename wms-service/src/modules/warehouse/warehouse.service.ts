@@ -15,6 +15,8 @@ import {
   GetWarehouseGrpcRequest,
   GetWarehouseLocationGrpcRequest,
   ListWarehouseLocationsGrpcRequest,
+  RestoreWarehouseGrpcRequest,
+  RestoreWarehouseLocationGrpcRequest,
   UpdateWarehouseGrpcRequest,
   UpdateWarehouseLocationGrpcRequest,
   WarehouseGrpc,
@@ -42,14 +44,17 @@ export class WarehouseService {
       where: { warehouseCode },
     });
 
-    if (existingWarehouse?.status === ACTIVE_STATUS) {
+    if (existingWarehouse) {
       throw new RpcException({
         code: status.ALREADY_EXISTS,
-        message: 'Warehouse code already exists',
+        message:
+          existingWarehouse.status === DELETED_STATUS
+            ? 'Warehouse code belongs to a deleted warehouse; restore it instead'
+            : 'Warehouse code already exists',
       });
     }
 
-    const warehouse = existingWarehouse ?? this.warehouseRepository.create();
+    const warehouse = this.warehouseRepository.create();
     warehouse.warehouseCode = warehouseCode;
     warehouse.warehouseName = request.warehouseName ?? '';
     warehouse.address = request.address || '';
@@ -67,9 +72,7 @@ export class WarehouseService {
       action: 'WAREHOUSE_CREATE',
       referenceType: 'WAREHOUSE',
       referenceId: savedWarehouse.warehouseId,
-      description: existingWarehouse
-        ? `Overwrote warehouse ${savedWarehouse.warehouseCode}`
-        : `Created warehouse ${savedWarehouse.warehouseCode}`,
+      description: `Created warehouse ${savedWarehouse.warehouseCode}`,
     });
 
     return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
@@ -94,12 +97,13 @@ export class WarehouseService {
   }
 
   async updateWarehouse(request: UpdateWarehouseGrpcRequest) {
-    const warehouse = await this.findWarehouse(this.getWarehouseId(request));
+    const warehouse = await this.findActiveWarehouse(
+      this.getWarehouseId(request),
+    );
     const now = new Date();
 
     warehouse.warehouseCode = request.warehouseCode ?? warehouse.warehouseCode;
-    warehouse.warehouseName =
-      request.warehouseName ?? warehouse.warehouseName;
+    warehouse.warehouseName = request.warehouseName ?? warehouse.warehouseName;
     warehouse.address =
       request.address === undefined ? warehouse.address : request.address || '';
     warehouse.updatedBy = this.getActorUsername(request);
@@ -119,7 +123,9 @@ export class WarehouseService {
   }
 
   async deleteWarehouse(request: DeleteWarehouseGrpcRequest) {
-    const warehouse = await this.findWarehouse(this.getWarehouseId(request));
+    const warehouse = await this.findActiveWarehouse(
+      this.getWarehouseId(request),
+    );
     const now = new Date();
 
     warehouse.status = DELETED_STATUS;
@@ -139,9 +145,32 @@ export class WarehouseService {
     return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
   }
 
+  async restoreWarehouse(request: RestoreWarehouseGrpcRequest) {
+    const warehouse = await this.findDeletedWarehouse(
+      this.getWarehouseId(request),
+    );
+    const now = new Date();
+
+    warehouse.status = ACTIVE_STATUS;
+    warehouse.updatedBy = this.getActorUsername(request);
+    warehouse.updatedAt = now;
+
+    const savedWarehouse = await this.warehouseRepository.save(warehouse);
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_RESTORE',
+      referenceType: 'WAREHOUSE',
+      referenceId: savedWarehouse.warehouseId,
+      description: `Restored warehouse ${savedWarehouse.warehouseCode}`,
+    });
+
+    return { warehouse: this.toGrpcWarehouse(savedWarehouse) };
+  }
+
   async createWarehouseLocation(request: CreateWarehouseLocationGrpcRequest) {
     const warehouseId = this.getWarehouseId(request);
-    await this.findWarehouse(warehouseId);
+    await this.findActiveWarehouse(warehouseId);
 
     const now = new Date();
     const actorUsername = this.getActorUsername(request);
@@ -191,13 +220,15 @@ export class WarehouseService {
   }
 
   async updateWarehouseLocation(request: UpdateWarehouseLocationGrpcRequest) {
-    const location = await this.findWarehouseLocation(
+    const location = await this.findActiveWarehouseLocation(
       this.getLocationId(request),
     );
     const warehouseId = request.warehouseId;
     if (warehouseId) {
-      await this.findWarehouse(warehouseId);
+      await this.findActiveWarehouse(warehouseId);
       location.warehouseId = warehouseId;
+    } else {
+      await this.findActiveWarehouse(location.warehouseId);
     }
 
     location.zone =
@@ -219,7 +250,7 @@ export class WarehouseService {
   }
 
   async deleteWarehouseLocation(request: DeleteWarehouseLocationGrpcRequest) {
-    const location = await this.findWarehouseLocation(
+    const location = await this.findActiveWarehouseLocation(
       this.getLocationId(request),
     );
 
@@ -240,6 +271,29 @@ export class WarehouseService {
     return { location: this.toGrpcWarehouseLocation(savedLocation) };
   }
 
+  async restoreWarehouseLocation(request: RestoreWarehouseLocationGrpcRequest) {
+    const location = await this.findDeletedWarehouseLocation(
+      this.getLocationId(request),
+    );
+    await this.findActiveWarehouse(location.warehouseId);
+
+    location.status = ACTIVE_STATUS;
+    location.updatedBy = this.getActorUsername(request);
+    location.updatedAt = new Date();
+
+    const savedLocation = await this.locationRepository.save(location);
+    await this.activityLogService.createActivityLog({
+      userId: request.actorUserId ?? '',
+      username: this.getActorUsername(request),
+      action: 'WAREHOUSE_LOCATION_RESTORE',
+      referenceType: 'WAREHOUSE_LOCATION',
+      referenceId: savedLocation.locationId,
+      description: `Restored warehouse location ${savedLocation.zone ?? ''}`,
+    });
+
+    return { location: this.toGrpcWarehouseLocation(savedLocation) };
+  }
+
   private async findWarehouse(warehouseId: string) {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouseId },
@@ -249,6 +303,32 @@ export class WarehouseService {
       throw new RpcException({
         code: status.NOT_FOUND,
         message: 'Warehouse not found',
+      });
+    }
+
+    return warehouse;
+  }
+
+  private async findActiveWarehouse(warehouseId: string) {
+    const warehouse = await this.findWarehouse(warehouseId);
+
+    if (warehouse.status !== ACTIVE_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Warehouse is not active',
+      });
+    }
+
+    return warehouse;
+  }
+
+  private async findDeletedWarehouse(warehouseId: string) {
+    const warehouse = await this.findWarehouse(warehouseId);
+
+    if (warehouse.status !== DELETED_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Only deleted warehouses can be restored',
       });
     }
 
@@ -270,11 +350,38 @@ export class WarehouseService {
     return location;
   }
 
+  private async findActiveWarehouseLocation(locationId: string) {
+    const location = await this.findWarehouseLocation(locationId);
+
+    if (location.status !== ACTIVE_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Warehouse location is not active',
+      });
+    }
+
+    return location;
+  }
+
+  private async findDeletedWarehouseLocation(locationId: string) {
+    const location = await this.findWarehouseLocation(locationId);
+
+    if (location.status !== DELETED_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Only deleted warehouse locations can be restored',
+      });
+    }
+
+    return location;
+  }
+
   private getWarehouseId(
     request:
       | GetWarehouseGrpcRequest
       | UpdateWarehouseGrpcRequest
       | DeleteWarehouseGrpcRequest
+      | RestoreWarehouseGrpcRequest
       | CreateWarehouseLocationGrpcRequest,
   ) {
     const warehouseId = request.warehouseId;
@@ -293,7 +400,8 @@ export class WarehouseService {
     request:
       | GetWarehouseLocationGrpcRequest
       | UpdateWarehouseLocationGrpcRequest
-      | DeleteWarehouseLocationGrpcRequest,
+      | DeleteWarehouseLocationGrpcRequest
+      | RestoreWarehouseLocationGrpcRequest,
   ) {
     const locationId = request.locationId;
 

@@ -9,6 +9,8 @@ import type {
   GetWarehouseLocationGrpcRequest,
   ListWarehouseLocationsGrpcRequest,
   ListWarehousesGrpcRequest,
+  RestoreWarehouseGrpcRequest,
+  RestoreWarehouseLocationGrpcRequest,
   UpdateWarehouseGrpcRequest,
   UpdateWarehouseLocationGrpcRequest,
 } from './grpc/warehouse-grpc.types';
@@ -43,6 +45,11 @@ export class WarehouseGrpcController {
     return this.warehouseService.deleteWarehouse(request);
   }
 
+  @GrpcMethod('WarehouseApi', 'RestoreWarehouse')
+  restoreWarehouse(request: RestoreWarehouseGrpcRequest) {
+    return this.warehouseService.restoreWarehouse(request);
+  }
+
   @GrpcMethod('WarehouseApi', 'CreateWarehouseLocation')
   createWarehouseLocation(request: CreateWarehouseLocationGrpcRequest) {
     return this.warehouseService.createWarehouseLocation(request);
@@ -66,5 +73,10 @@ export class WarehouseGrpcController {
   @GrpcMethod('WarehouseApi', 'DeleteWarehouseLocation')
   deleteWarehouseLocation(request: DeleteWarehouseLocationGrpcRequest) {
     return this.warehouseService.deleteWarehouseLocation(request);
+  }
+
+  @GrpcMethod('WarehouseApi', 'RestoreWarehouseLocation')
+  restoreWarehouseLocation(request: RestoreWarehouseLocationGrpcRequest) {
+    return this.warehouseService.restoreWarehouseLocation(request);
   }
 }

@@ -46,3 +46,12 @@ export async function deleteProduct(productId: string) {
     method: "DELETE",
   });
 }
+
+export async function restoreProduct(productId: string) {
+  return apiRequest<{ product: Product | null }>(
+    `/api/products/${productId}/restore`,
+    {
+      method: "PATCH",
+    },
+  );
+}

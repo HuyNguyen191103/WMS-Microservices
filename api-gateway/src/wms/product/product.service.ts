@@ -109,6 +109,19 @@ export class ProductService implements OnModuleInit {
     );
   }
 
+  async restoreProduct(user: AuthenticatedUser, productId: string) {
+    return this.handleGrpcRequest(
+      firstValueFrom(
+        this.productGrpcClient.restoreProduct({
+          productId,
+          actorUsername: user.username,
+          actorUserId: user.user_id,
+          actorRole: this.getPrimaryRole(user),
+        }),
+      ),
+    );
+  }
+
   private getPrimaryRole(user: AuthenticatedUser) {
     return user.roles[0] ?? '';
   }

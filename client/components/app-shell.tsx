@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   Activity,
+  ArrowLeftRight,
   Boxes,
   Home,
   LogOut,
@@ -23,7 +24,10 @@ import {
 import { toast } from "sonner";
 import type { UserInfo } from "@/lib/auth-api";
 import { getMe } from "@/lib/auth-api";
-import { canReadActivityLogs } from "@/lib/permissions";
+import {
+  canReadActivityLogs,
+  canReadInventoryTransactions,
+} from "@/lib/permissions";
 import {
   ACCESS_TOKEN_COOKIE,
   clearSession,
@@ -41,6 +45,13 @@ const navItems = [
   { href: "/products", label: "Product", icon: Package },
   { href: "/inbound", label: "Inbound", icon: Truck },
   { href: "/outbound", label: "Outbound", icon: Send },
+  { href: "/inventory-items", label: "Inventory Items", icon: Boxes },
+  {
+    href: "/inventory-transactions",
+    label: "Inventory Transactions",
+    icon: ArrowLeftRight,
+    managerUpOnly: true,
+  },
   { href: "/activity-logs", label: "ActivityLog", icon: Activity, adminOnly: true },
 ];
 
@@ -110,6 +121,10 @@ export function AppShell({ children }: AppShellProps) {
   const visibleNavItems = useMemo(
     () =>
       navItems.filter((item) => {
+        if (item.managerUpOnly) {
+          return canReadInventoryTransactions(user);
+        }
+
         if (!item.adminOnly) {
           return true;
         }

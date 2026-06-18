@@ -34,6 +34,13 @@ export interface DeleteProductGrpcRequest {
   actorRole?: string;
 }
 
+export interface RestoreProductGrpcRequest {
+  productId?: string;
+  actorUsername?: string;
+  actorUserId?: string;
+  actorRole?: string;
+}
+
 export interface ProductGrpc {
   productId?: string;
   sku: string;

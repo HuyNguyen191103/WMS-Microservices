@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { listInbounds } from "@/lib/api/inbound-api";
 import { listProducts } from "@/lib/api/product-api";
 import { listWarehouses } from "@/lib/api/warehouse-api";
 
@@ -23,6 +24,7 @@ function HomeContent() {
   const [summary, setSummary] = useState({
     products: 0,
     warehouses: 0,
+    inbounds: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,14 +33,16 @@ function HomeContent() {
       await Promise.resolve();
 
       try {
-        const [products, warehouses] = await Promise.all([
+        const [products, warehouses, inbounds] = await Promise.all([
           listProducts(),
           listWarehouses(),
+          listInbounds(),
         ]);
 
         setSummary({
           products: products.length,
           warehouses: warehouses.length,
+          inbounds: inbounds.length,
         });
       } finally {
         setIsLoading(false);
@@ -65,10 +69,10 @@ function HomeContent() {
     },
     {
       title: "Inbound",
-      value: "Soon",
+      value: summary.inbounds,
       href: "/inbound",
       icon: Truck,
-      description: "Receiving workflows will be connected when APIs are ready.",
+      description: "Receiving orders currently registered in the system.",
     },
     {
       title: "Outbound",

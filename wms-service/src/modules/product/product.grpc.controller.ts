@@ -5,6 +5,7 @@ import type {
   DeleteProductGrpcRequest,
   GetProductGrpcRequest,
   ListProductsGrpcRequest,
+  RestoreProductGrpcRequest,
   UpdateProductGrpcRequest,
 } from './grpc/product-grpc.types';
 import { ProductService } from './product.service';
@@ -36,5 +37,10 @@ export class ProductGrpcController {
   @GrpcMethod('ProductApi', 'DeleteProduct')
   deleteProduct(request: DeleteProductGrpcRequest) {
     return this.productService.deleteProduct(request);
+  }
+
+  @GrpcMethod('ProductApi', 'RestoreProduct')
+  restoreProduct(request: RestoreProductGrpcRequest) {
+    return this.productService.restoreProduct(request);
   }
 }

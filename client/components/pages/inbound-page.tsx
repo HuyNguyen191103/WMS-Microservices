@@ -64,6 +64,7 @@ type InboundForm = {
 };
 
 const terminalStatuses = new Set(["DONE", "DELETE", "DELETED"]);
+const ACTIVE_STATUS = "ACTIVE";
 const selectClassName =
   "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -132,12 +133,47 @@ function InboundContent({
     [locationsByWarehouseId],
   );
 
+  const activeWarehouses = useMemo(
+    () =>
+      warehouses.filter(
+        (warehouse) => warehouse.status.toUpperCase() === ACTIVE_STATUS,
+      ),
+    [warehouses],
+  );
+
+  const activeProducts = useMemo(
+    () =>
+      products.filter(
+        (product) => product.status.toUpperCase() === ACTIVE_STATUS,
+      ),
+    [products],
+  );
+
   const currentLocations = form.warehouseId
-    ? locationsByWarehouseId[form.warehouseId] ?? []
+    ? (locationsByWarehouseId[form.warehouseId] ?? []).filter(
+        (location) => location.status.toUpperCase() === ACTIVE_STATUS,
+      )
     : [];
   const isLoadingCurrentLocations = form.warehouseId
     ? loadingLocationWarehouseIds.includes(form.warehouseId)
     : false;
+
+  const hasInboundChanges = editingInbound
+    ? form.inboundNo.trim() !== editingInbound.inboundNo ||
+      form.warehouseId !== editingInbound.warehouseId ||
+      form.supplierName.trim() !== (editingInbound.supplierName ?? "") ||
+      form.actualDate !== toDateInputValue(editingInbound.actualDate) ||
+      form.items.length !== editingInbound.items.length ||
+      form.items.some((item, index) => {
+        const originalItem = editingInbound.items[index];
+        return (
+          !originalItem ||
+          item.productId !== originalItem.productId ||
+          item.locationId !== originalItem.locationId ||
+          Number(item.actualQty) !== originalItem.actualQty
+        );
+      })
+    : true;
 
   async function loadInbounds() {
     setIsLoading(true);
@@ -329,6 +365,10 @@ function InboundContent({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (editingInbound && !hasInboundChanges) {
+      return;
+    }
 
     const payload = buildPayload();
     if (typeof payload === "string") {
@@ -650,7 +690,7 @@ function InboundContent({
                   className={selectClassName}
                 >
                   <option value="">Select warehouse</option>
-                  {warehouses.map((warehouse) => (
+                  {activeWarehouses.map((warehouse) => (
                     <option
                       key={warehouse.warehouse_id}
                       value={warehouse.warehouse_id}
@@ -718,7 +758,7 @@ function InboundContent({
                         className={selectClassName}
                       >
                         <option value="">Select product</option>
-                        {products.map((product) => (
+                        {activeProducts.map((product) => (
                           <option
                             key={product.product_id}
                             value={product.product_id}
@@ -790,7 +830,12 @@ function InboundContent({
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting || isLoadingLookups}>
+              <Button
+                type="submit"
+                disabled={
+                  isSubmitting || isLoadingLookups || !hasInboundChanges
+                }
+              >
                 {isSubmitting ? "Saving..." : "Save Inbound"}
               </Button>
             </DialogFooter>

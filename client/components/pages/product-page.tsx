@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -27,8 +27,11 @@ import {
   listProducts,
   Product,
   ProductPayload,
+  restoreProduct,
   updateProduct,
 } from "@/lib/api/product-api";
+
+const DELETED_STATUS = "DELETE";
 
 const emptyForm = {
   sku: "",
@@ -64,9 +67,18 @@ function ProductContent({
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [restoringProduct, setRestoringProduct] = useState<Product | null>(null);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [fieldError, setFieldError] = useState("");
+
+  const hasProductChanges = editingProduct
+    ? form.sku.trim() !== editingProduct.sku ||
+      form.productName.trim() !== editingProduct.product_name ||
+      form.description.trim() !== (editingProduct.description ?? "") ||
+      form.category.trim() !== (editingProduct.category ?? "") ||
+      form.unit.trim() !== (editingProduct.unit ?? "")
+    : true;
 
   async function loadProducts() {
     setIsLoading(true);
@@ -111,6 +123,10 @@ function ProductContent({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (editingProduct && !hasProductChanges) {
+      return;
+    }
 
     if (!form.sku.trim() || !form.productName.trim()) {
       setFieldError("SKU and product name are required.");
@@ -166,6 +182,26 @@ function ProductContent({
     }
   }
 
+  async function handleRestore() {
+    if (!restoringProduct) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await restoreProduct(restoringProduct.product_id);
+      toast.success("Product restored");
+      setRestoringProduct(null);
+      await loadProducts();
+    } catch (error) {
+      toast.error("Restore failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   const columns = useMemo<DataTableColumn<Product>[]>(
     () => [
       { key: "sku", header: "SKU", cell: (product) => product.sku },
@@ -197,8 +233,26 @@ function ProductContent({
         key: "actions",
         header: "Actions",
         className: "text-right",
-        cell: (product) =>
-          canWrite ? (
+        cell: (product) => {
+          if (!canWrite) {
+            return <span className="text-xs text-slate-400">Read only</span>;
+          }
+
+          const isDeleted =
+            product.status.toUpperCase() === DELETED_STATUS;
+
+          return isDeleted ? (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRestoringProduct(product)}
+              >
+                <Undo2 className="h-4 w-4" />
+                Undo
+              </Button>
+            </div>
+          ) : (
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => openEditForm(product)}>
                 <Pencil className="h-4 w-4" />
@@ -213,9 +267,8 @@ function ProductContent({
                 Delete
               </Button>
             </div>
-          ) : (
-            <span className="text-xs text-slate-400">Read only</span>
-          ),
+          );
+        },
       },
     ],
     [canWrite],
@@ -346,7 +399,10 @@ function ProductContent({
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !hasProductChanges}
+              >
                 {isSubmitting ? "Saving..." : "Save Product"}
               </Button>
             </DialogFooter>
@@ -357,10 +413,22 @@ function ProductContent({
       <ConfirmDialog
         open={Boolean(deletingProduct)}
         title="Delete product"
-        description={`Delete ${deletingProduct?.product_name ?? "this product"}? This action cannot be undone.`}
+        description={`Delete ${deletingProduct?.product_name ?? "this product"}? You can restore it later.`}
         isSubmitting={isSubmitting}
         onOpenChange={(open) => !open && setDeletingProduct(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(restoringProduct)}
+        title="Restore product"
+        description={`Restore ${restoringProduct?.product_name ?? "this product"} and make it active again?`}
+        confirmText="Undo"
+        submittingText="Restoring..."
+        confirmVariant="default"
+        isSubmitting={isSubmitting}
+        onOpenChange={(open) => !open && setRestoringProduct(null)}
+        onConfirm={handleRestore}
       />
     </>
   );

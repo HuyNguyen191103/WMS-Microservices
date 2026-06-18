@@ -25,6 +25,7 @@ import {
 const CREATED_STATUS = 'CREATED';
 const DONE_STATUS = 'DONE';
 const DELETE_STATUS = 'DELETE';
+const ACTIVE_STATUS = 'ACTIVE';
 const INBOUND_TRANSACTION_TYPE = 'INBOUND';
 
 @Injectable()
@@ -45,7 +46,7 @@ export class InboundService {
         const itemInputs = this.getRequiredItems(request.items);
 
         await this.ensureInboundNoIsAvailable(manager, inboundNo);
-        await this.ensureWarehouseExists(manager, warehouseId);
+        await this.ensureWarehouseIsActive(manager, warehouseId);
         await this.ensureItemsAreValid(manager, warehouseId, itemInputs);
 
         const inboundOrder = manager.create(InboundOrder, {
@@ -134,7 +135,7 @@ export class InboundService {
 
         const warehouseId = request.warehouseId;
         if (warehouseId && warehouseId !== inbound.warehouseId) {
-          await this.ensureWarehouseExists(manager, warehouseId);
+          await this.ensureWarehouseIsActive(manager, warehouseId);
           inbound.warehouseId = warehouseId;
         }
 
@@ -304,7 +305,7 @@ export class InboundService {
     }
   }
 
-  private async ensureWarehouseExists(
+  private async ensureWarehouseIsActive(
     manager: EntityManager,
     warehouseId: string,
   ) {
@@ -318,6 +319,13 @@ export class InboundService {
         message: 'Warehouse not found',
       });
     }
+
+    if (warehouse.status !== ACTIVE_STATUS) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: 'Warehouse is not active',
+      });
+    }
   }
 
   private async ensureItemsAreValid(
@@ -325,6 +333,8 @@ export class InboundService {
     warehouseId: string,
     items: InboundItemInputGrpc[],
   ) {
+    await this.ensureWarehouseIsActive(manager, warehouseId);
+
     for (const item of items) {
       const productId = this.getProductId(item);
       const locationId = this.getLocationId(item);
@@ -338,6 +348,12 @@ export class InboundService {
           message: 'Product not found',
         });
       }
+      if (product.status !== ACTIVE_STATUS) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: 'Product is not active',
+        });
+      }
 
       const location = await manager.findOne(WarehouseLocation, {
         where: { locationId },
@@ -346,6 +362,12 @@ export class InboundService {
         throw new RpcException({
           code: status.NOT_FOUND,
           message: 'Warehouse location not found',
+        });
+      }
+      if (location.status !== ACTIVE_STATUS) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: 'Warehouse location is not active',
         });
       }
       if (location.warehouseId !== warehouseId) {

@@ -16,6 +16,9 @@ export interface WarehouseGrpcClient {
   deleteWarehouse(
     request: DeleteWarehouseGrpcRequest,
   ): Observable<WarehouseGrpcResponse>;
+  restoreWarehouse(
+    request: RestoreWarehouseGrpcRequest,
+  ): Observable<WarehouseGrpcResponse>;
   createWarehouseLocation(
     request: CreateWarehouseLocationGrpcRequest,
   ): Observable<WarehouseLocationGrpcResponse>;
@@ -30,6 +33,9 @@ export interface WarehouseGrpcClient {
   ): Observable<WarehouseLocationGrpcResponse>;
   deleteWarehouseLocation(
     request: DeleteWarehouseLocationGrpcRequest,
+  ): Observable<WarehouseLocationGrpcResponse>;
+  restoreWarehouseLocation(
+    request: RestoreWarehouseLocationGrpcRequest,
   ): Observable<WarehouseLocationGrpcResponse>;
 }
 
@@ -62,6 +68,10 @@ export interface DeleteWarehouseGrpcRequest extends ActorGrpcRequest {
   warehouseId: string;
 }
 
+export interface RestoreWarehouseGrpcRequest extends ActorGrpcRequest {
+  warehouseId: string;
+}
+
 export interface CreateWarehouseLocationGrpcRequest extends ActorGrpcRequest {
   warehouseId: string;
   zone?: string;
@@ -82,6 +92,10 @@ export interface UpdateWarehouseLocationGrpcRequest extends ActorGrpcRequest {
 }
 
 export interface DeleteWarehouseLocationGrpcRequest extends ActorGrpcRequest {
+  locationId: string;
+}
+
+export interface RestoreWarehouseLocationGrpcRequest extends ActorGrpcRequest {
   locationId: string;
 }
 

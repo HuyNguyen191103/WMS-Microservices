@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Eye, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, MapPin, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -35,6 +35,8 @@ import {
   deleteWarehouse,
   listWarehouseLocations,
   listWarehouses,
+  restoreWarehouseLocation,
+  restoreWarehouse,
   updateWarehouseLocation,
   updateWarehouse,
   Warehouse,
@@ -42,6 +44,9 @@ import {
   WarehouseLocationPayload,
   WarehousePayload,
 } from "@/lib/api/warehouse-api";
+
+const ACTIVE_STATUS = "ACTIVE";
+const DELETED_STATUS = "DELETE";
 
 const emptyForm = {
   warehouseCode: "",
@@ -66,6 +71,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [deletingWarehouse, setDeletingWarehouse] = useState<Warehouse | null>(null);
+  const [restoringWarehouse, setRestoringWarehouse] = useState<Warehouse | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [fieldError, setFieldError] = useState("");
   const [detailWarehouse, setDetailWarehouse] = useState<Warehouse | null>(null);
@@ -74,8 +80,20 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
   const [locationFormOpen, setLocationFormOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<WarehouseLocation | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<WarehouseLocation | null>(null);
+  const [restoringLocation, setRestoringLocation] =
+    useState<WarehouseLocation | null>(null);
   const [locationForm, setLocationForm] = useState(emptyLocationForm);
   const [locationFieldError, setLocationFieldError] = useState("");
+
+  const hasWarehouseChanges = editingWarehouse
+    ? form.warehouseCode.trim() !== editingWarehouse.warehouse_code ||
+      form.warehouseName.trim() !== editingWarehouse.warehouse_name ||
+      form.address.trim() !== (editingWarehouse.address ?? "")
+    : true;
+
+  const hasLocationChanges = editingLocation
+    ? locationForm.zone.trim() !== (editingLocation.zone ?? "")
+    : true;
 
   async function loadWarehouses() {
     setIsLoading(true);
@@ -153,6 +171,10 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (editingWarehouse && !hasWarehouseChanges) {
+      return;
+    }
+
     if (!form.warehouseCode.trim() || !form.warehouseName.trim()) {
       setFieldError("Warehouse code and warehouse name are required.");
       return;
@@ -205,8 +227,32 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  async function handleRestore() {
+    if (!restoringWarehouse) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await restoreWarehouse(restoringWarehouse.warehouse_id);
+      toast.success("Warehouse restored");
+      setRestoringWarehouse(null);
+      await loadWarehouses();
+    } catch (error) {
+      toast.error("Restore failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleLocationSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (editingLocation && !hasLocationChanges) {
+      return;
+    }
 
     if (!detailWarehouse) {
       return;
@@ -256,6 +302,26 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       await loadLocations(detailWarehouse.warehouse_id);
     } catch (error) {
       toast.error("Delete failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleLocationRestore() {
+    if (!restoringLocation || !detailWarehouse) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await restoreWarehouseLocation(restoringLocation.location_id);
+      toast.success("Warehouse location restored");
+      setRestoringLocation(null);
+      await loadLocations(detailWarehouse.warehouse_id);
+    } catch (error) {
+      toast.error("Restore failed", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
@@ -328,26 +394,38 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
                     Details
                   </Button>
                   {canWrite ? (
-                    <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => openEditForm(warehouse)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => setDeletingWarehouse(warehouse)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                    </>
+                    warehouse.status.toUpperCase() === DELETED_STATUS ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setRestoringWarehouse(warehouse)}
+                      >
+                        <Undo2 className="h-4 w-4" />
+                        Undo
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => openEditForm(warehouse)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setDeletingWarehouse(warehouse)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </>
+                    )
                   ) : null}
                 </div>
               </CardContent>
@@ -408,7 +486,10 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !hasWarehouseChanges}
+              >
                 {isSubmitting ? "Saving..." : "Save Warehouse"}
               </Button>
             </DialogFooter>
@@ -419,10 +500,22 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       <ConfirmDialog
         open={Boolean(deletingWarehouse)}
         title="Delete warehouse"
-        description={`Delete ${deletingWarehouse?.warehouse_name ?? "this warehouse"}? This action cannot be undone.`}
+        description={`Delete ${deletingWarehouse?.warehouse_name ?? "this warehouse"}? You can restore it later.`}
         isSubmitting={isSubmitting}
         onOpenChange={(open) => !open && setDeletingWarehouse(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(restoringWarehouse)}
+        title="Restore warehouse"
+        description={`Restore ${restoringWarehouse?.warehouse_name ?? "this warehouse"}? Deleted locations will remain deleted.`}
+        confirmText="Undo"
+        submittingText="Restoring..."
+        confirmVariant="default"
+        isSubmitting={isSubmitting}
+        onOpenChange={(open) => !open && setRestoringWarehouse(null)}
+        onConfirm={handleRestore}
       />
 
       <Dialog
@@ -433,6 +526,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
             setLocations([]);
             setLocationFormOpen(false);
             setEditingLocation(null);
+            setRestoringLocation(null);
           }
         }}
       >
@@ -467,7 +561,8 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
                 Zones registered under this warehouse.
               </p>
             </div>
-            {canWrite ? (
+            {canWrite &&
+            detailWarehouse?.status.toUpperCase() === ACTIVE_STATUS ? (
               <Button size="sm" onClick={openCreateLocationForm}>
                 <Plus className="h-4 w-4" />
                 New Location
@@ -497,26 +592,41 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
                     </div>
                     <StatusBadge status={location.status} />
                   </div>
-                  {canWrite ? (
+                  {canWrite &&
+                  detailWarehouse?.status.toUpperCase() === ACTIVE_STATUS ? (
                     <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => openEditLocationForm(location)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => setDeletingLocation(location)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
+                      {location.status.toUpperCase() === DELETED_STATUS ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setRestoringLocation(location)}
+                        >
+                          <Undo2 className="h-4 w-4" />
+                          Undo
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => openEditLocationForm(location)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setDeletingLocation(location)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -562,7 +672,10 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !hasLocationChanges}
+              >
                 {isSubmitting ? "Saving..." : "Save Location"}
               </Button>
             </DialogFooter>
@@ -573,10 +686,22 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       <ConfirmDialog
         open={Boolean(deletingLocation)}
         title="Delete warehouse location"
-        description={`Delete ${deletingLocation?.zone ?? "this location"}? This action cannot be undone.`}
+        description={`Delete ${deletingLocation?.zone ?? "this location"}? You can restore it later.`}
         isSubmitting={isSubmitting}
         onOpenChange={(open) => !open && setDeletingLocation(null)}
         onConfirm={handleLocationDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(restoringLocation)}
+        title="Restore warehouse location"
+        description={`Restore ${restoringLocation?.zone ?? "this location"} and make it active again?`}
+        confirmText="Undo"
+        submittingText="Restoring..."
+        confirmVariant="default"
+        isSubmitting={isSubmitting}
+        onOpenChange={(open) => !open && setRestoringLocation(null)}
+        onConfirm={handleLocationRestore}
       />
     </>
   );

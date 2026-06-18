@@ -14,6 +14,9 @@ export interface ProductGrpcClient {
   deleteProduct(
     request: DeleteProductGrpcRequest,
   ): Observable<ProductGrpcResponse>;
+  restoreProduct(
+    request: RestoreProductGrpcRequest,
+  ): Observable<ProductGrpcResponse>;
 }
 
 export interface CreateProductGrpcRequest {
@@ -46,6 +49,13 @@ export interface UpdateProductGrpcRequest {
 }
 
 export interface DeleteProductGrpcRequest {
+  productId: string;
+  actorUsername: string;
+  actorUserId: string;
+  actorRole: string;
+}
+
+export interface RestoreProductGrpcRequest {
   productId: string;
   actorUsername: string;
   actorUserId: string;
