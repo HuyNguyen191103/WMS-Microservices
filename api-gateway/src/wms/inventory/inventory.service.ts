@@ -1,30 +1,21 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleInit,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
-import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
 import {
   InventoryGrpcClient,
   InventoryItemGrpc,
   InventoryTransactionGrpc,
 } from '../grpc/inventory-grpc.types';
+import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 
 @Injectable()
 export class InventoryService implements OnModuleInit {
-  private readonly logger = new Logger(InventoryService.name);
   private inventoryGrpcClient!: InventoryGrpcClient;
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
@@ -45,7 +36,7 @@ export class InventoryService implements OnModuleInit {
         ),
       };
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -67,7 +58,7 @@ export class InventoryService implements OnModuleInit {
         },
       };
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -110,26 +101,10 @@ export class InventoryService implements OnModuleInit {
     };
   }
 
-  private toHttpException(error: unknown) {
-    const grpcError = error as { code?: number; details?: string };
-    this.logger.warn(
-      `WMS Inventory gRPC request failed: code=${grpcError.code ?? 'unknown'}, details=${grpcError.details ?? 'none'}`,
-    );
-
-    const message = grpcError.details || 'WMS inventory request failed';
-
-    if (grpcError.code === status.INVALID_ARGUMENT) {
-      return new BadRequestException(message);
-    }
-
-    if (grpcError.code === status.UNAUTHENTICATED) {
-      return new UnauthorizedException(message);
-    }
-
-    if (grpcError.code === status.PERMISSION_DENIED) {
-      return new ForbiddenException(message);
-    }
-
-    return new BadGatewayException(message);
+  private mapGrpcError(error: unknown) {
+    return this.exceptionMapper.toHttpException(error, {
+      domain: 'Inventory',
+      fallbackMessage: 'WMS inventory request failed',
+    });
   }
 }

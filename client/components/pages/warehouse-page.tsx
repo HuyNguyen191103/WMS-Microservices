@@ -5,6 +5,8 @@ import { Eye, MapPin, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CrudFormDialog } from "@/components/crud-form-dialog";
+import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -19,15 +21,16 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAsyncAction } from "@/hooks/use-async-action";
 import { formatDateTime } from "@/lib/format";
 import { canWriteWarehouse } from "@/lib/permissions";
+import { showRequestError } from "@/lib/request-error";
 import {
   createWarehouseLocation,
   createWarehouse,
@@ -67,19 +70,28 @@ export function WarehousePage() {
 function WarehouseContent({ canWrite }: { canWrite: boolean }) {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, run } = useAsyncAction();
   const [formOpen, setFormOpen] = useState(false);
-  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
-  const [deletingWarehouse, setDeletingWarehouse] = useState<Warehouse | null>(null);
-  const [restoringWarehouse, setRestoringWarehouse] = useState<Warehouse | null>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(
+    null,
+  );
+  const [deletingWarehouse, setDeletingWarehouse] = useState<Warehouse | null>(
+    null,
+  );
+  const [restoringWarehouse, setRestoringWarehouse] =
+    useState<Warehouse | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [fieldError, setFieldError] = useState("");
-  const [detailWarehouse, setDetailWarehouse] = useState<Warehouse | null>(null);
+  const [detailWarehouse, setDetailWarehouse] = useState<Warehouse | null>(
+    null,
+  );
   const [locations, setLocations] = useState<WarehouseLocation[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationFormOpen, setLocationFormOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<WarehouseLocation | null>(null);
-  const [deletingLocation, setDeletingLocation] = useState<WarehouseLocation | null>(null);
+  const [editingLocation, setEditingLocation] =
+    useState<WarehouseLocation | null>(null);
+  const [deletingLocation, setDeletingLocation] =
+    useState<WarehouseLocation | null>(null);
   const [restoringLocation, setRestoringLocation] =
     useState<WarehouseLocation | null>(null);
   const [locationForm, setLocationForm] = useState(emptyLocationForm);
@@ -100,9 +112,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
     try {
       setWarehouses(await listWarehouses());
     } catch (error) {
-      toast.error("Unable to load warehouses", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load warehouses", error);
     } finally {
       setIsLoading(false);
     }
@@ -144,9 +154,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
     try {
       setLocations(await listWarehouseLocations(warehouseId));
     } catch (error) {
-      toast.error("Unable to load warehouse locations", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load warehouse locations", error);
     } finally {
       setIsLoadingLocations(false);
     }
@@ -186,8 +194,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       address: form.address.trim(),
     };
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       if (editingWarehouse) {
         await updateWarehouse(editingWarehouse.warehouse_id, payload);
         toast.success("Warehouse updated");
@@ -198,13 +205,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
 
       setFormOpen(false);
       await loadWarehouses();
-    } catch (error) {
-      toast.error("Warehouse action failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Warehouse action failed");
   }
 
   async function handleDelete() {
@@ -212,19 +213,12 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await deleteWarehouse(deletingWarehouse.warehouse_id);
       toast.success("Warehouse deleted");
       setDeletingWarehouse(null);
       await loadWarehouses();
-    } catch (error) {
-      toast.error("Delete failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Delete failed");
   }
 
   async function handleRestore() {
@@ -232,19 +226,12 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await restoreWarehouse(restoringWarehouse.warehouse_id);
       toast.success("Warehouse restored");
       setRestoringWarehouse(null);
       await loadWarehouses();
-    } catch (error) {
-      toast.error("Restore failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Restore failed");
   }
 
   async function handleLocationSubmit(event: FormEvent<HTMLFormElement>) {
@@ -268,8 +255,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       zone: locationForm.zone.trim(),
     };
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       if (editingLocation) {
         await updateWarehouseLocation(editingLocation.location_id, payload);
         toast.success("Warehouse location updated");
@@ -280,13 +266,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
 
       setLocationFormOpen(false);
       await loadLocations(detailWarehouse.warehouse_id);
-    } catch (error) {
-      toast.error("Warehouse location action failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Warehouse location action failed");
   }
 
   async function handleLocationDelete() {
@@ -294,19 +274,12 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await deleteWarehouseLocation(deletingLocation.location_id);
       toast.success("Warehouse location deleted");
       setDeletingLocation(null);
       await loadLocations(detailWarehouse.warehouse_id);
-    } catch (error) {
-      toast.error("Delete failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Delete failed");
   }
 
   async function handleLocationRestore() {
@@ -314,19 +287,12 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await restoreWarehouseLocation(restoringLocation.location_id);
       toast.success("Warehouse location restored");
       setRestoringLocation(null);
       await loadLocations(detailWarehouse.warehouse_id);
-    } catch (error) {
-      toast.error("Restore failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Restore failed");
   }
 
   return (
@@ -346,11 +312,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       />
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-10 text-center text-sm text-slate-500">
-            Loading warehouses...
-          </CardContent>
-        </Card>
+        <LoadingState message="Loading warehouses..." className="p-10" />
       ) : warehouses.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {warehouses.map((warehouse) => (
@@ -359,7 +321,9 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle>{warehouse.warehouse_name}</CardTitle>
-                    <CardDescription>{warehouse.warehouse_code}</CardDescription>
+                    <CardDescription>
+                      {warehouse.warehouse_code}
+                    </CardDescription>
                   </div>
                   <StatusBadge status={warehouse.status} />
                 </div>
@@ -367,7 +331,9 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
               <CardContent>
                 <div className="flex gap-3 text-sm text-slate-600">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                  <p className="min-h-10">{warehouse.address || "No address"}</p>
+                  <p className="min-h-10">
+                    {warehouse.address || "No address"}
+                  </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-slate-500">
                   <div>
@@ -440,62 +406,50 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
         </Card>
       )}
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingWarehouse ? "Edit warehouse" : "Create warehouse"}
-            </DialogTitle>
-            <DialogDescription>
-              Define the facility details used by inventory workflows.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="warehouseCode">Warehouse Code</Label>
-                <Input
-                  id="warehouseCode"
-                  value={form.warehouseCode}
-                  onChange={(event) =>
-                    setForm({ ...form, warehouseCode: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="warehouseName">Warehouse Name</Label>
-                <Input
-                  id="warehouseName"
-                  value={form.warehouseName}
-                  onChange={(event) =>
-                    setForm({ ...form, warehouseName: event.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={form.address}
-                onChange={(event) => setForm({ ...form, address: event.target.value })}
-              />
-            </div>
-            {fieldError ? <p className="text-sm text-red-600">{fieldError}</p> : null}
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !hasWarehouseChanges}
-              >
-                {isSubmitting ? "Saving..." : "Save Warehouse"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CrudFormDialog
+        open={formOpen}
+        title={editingWarehouse ? "Edit warehouse" : "Create warehouse"}
+        description="Define the facility details used by inventory workflows."
+        isSubmitting={isSubmitting}
+        submitText="Save Warehouse"
+        submitDisabled={!hasWarehouseChanges}
+        error={fieldError}
+        onOpenChange={setFormOpen}
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="warehouseCode">Warehouse Code</Label>
+            <Input
+              id="warehouseCode"
+              value={form.warehouseCode}
+              onChange={(event) =>
+                setForm({ ...form, warehouseCode: event.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="warehouseName">Warehouse Name</Label>
+            <Input
+              id="warehouseName"
+              value={form.warehouseName}
+              onChange={(event) =>
+                setForm({ ...form, warehouseName: event.target.value })
+              }
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="address">Address</Label>
+          <Textarea
+            id="address"
+            value={form.address}
+            onChange={(event) =>
+              setForm({ ...form, address: event.target.value })
+            }
+          />
+        </div>
+      </CrudFormDialog>
 
       <ConfirmDialog
         open={Boolean(deletingWarehouse)}
@@ -532,7 +486,9 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
       >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{detailWarehouse?.warehouse_name ?? "Warehouse"} details</DialogTitle>
+            <DialogTitle>
+              {detailWarehouse?.warehouse_name ?? "Warehouse"} details
+            </DialogTitle>
             <DialogDescription>
               Review and maintain warehouse locations for this facility.
             </DialogDescription>
@@ -571,9 +527,7 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
           </div>
 
           {isLoadingLocations ? (
-            <div className="rounded-md border border-slate-200 p-8 text-center text-sm text-slate-500">
-              Loading locations...
-            </div>
+            <LoadingState message="Loading locations..." />
           ) : locations.length ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {locations.map((location) => (
@@ -640,48 +594,32 @@ function WarehouseContent({ canWrite }: { canWrite: boolean }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={locationFormOpen} onOpenChange={setLocationFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingLocation ? "Edit warehouse location" : "Create warehouse location"}
-            </DialogTitle>
-            <DialogDescription>
-              Locations help group stock by zone inside a warehouse.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleLocationSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="zone">Zone</Label>
-              <Input
-                id="zone"
-                value={locationForm.zone}
-                onChange={(event) =>
-                  setLocationForm({ ...locationForm, zone: event.target.value })
-                }
-              />
-            </div>
-            {locationFieldError ? (
-              <p className="text-sm text-red-600">{locationFieldError}</p>
-            ) : null}
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setLocationFormOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !hasLocationChanges}
-              >
-                {isSubmitting ? "Saving..." : "Save Location"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CrudFormDialog
+        open={locationFormOpen}
+        title={
+          editingLocation
+            ? "Edit warehouse location"
+            : "Create warehouse location"
+        }
+        description="Locations help group stock by zone inside a warehouse."
+        isSubmitting={isSubmitting}
+        submitText="Save Location"
+        submitDisabled={!hasLocationChanges}
+        error={locationFieldError}
+        onOpenChange={setLocationFormOpen}
+        onSubmit={handleLocationSubmit}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="zone">Zone</Label>
+          <Input
+            id="zone"
+            value={locationForm.zone}
+            onChange={(event) =>
+              setLocationForm({ ...locationForm, zone: event.target.value })
+            }
+          />
+        </div>
+      </CrudFormDialog>
 
       <ConfirmDialog
         open={Boolean(deletingLocation)}

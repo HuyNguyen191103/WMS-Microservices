@@ -66,18 +66,6 @@ export class ActivityLogService {
     };
   }
 
-  async listAllActivityLogs() {
-    const activityLogs = await this.activityLogRepository.find({
-      order: { createdAt: 'DESC' },
-    });
-
-    return {
-      activityLogs: activityLogs.map((activityLog) =>
-        this.toGrpcActivityLog(activityLog),
-      ),
-    };
-  }
-
   private toGrpcActivityLog(activityLog: ActivityLog): ActivityLogGrpc {
     return {
       logId: activityLog.logId,

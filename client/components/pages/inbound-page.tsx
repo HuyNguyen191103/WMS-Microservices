@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CrudFormDialog } from "@/components/crud-form-dialog";
 import { DataTable, DataTableColumn } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -26,12 +27,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAsyncAction } from "@/hooks/use-async-action";
 import { formatDateTime } from "@/lib/format";
 import {
   canCompleteInbound,
   canCreateInbound,
   canWriteInbound,
 } from "@/lib/permissions";
+import { showRequestError } from "@/lib/request-error";
 import {
   completeInbound,
   createInbound,
@@ -117,7 +120,7 @@ function InboundContent({
     useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingLookups, setIsLoadingLookups] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, run } = useAsyncAction();
   const [formOpen, setFormOpen] = useState(false);
   const [editingInbound, setEditingInbound] = useState<Inbound | null>(null);
   const [detailInbound, setDetailInbound] = useState<Inbound | null>(null);
@@ -180,9 +183,7 @@ function InboundContent({
     try {
       setInbounds(await listInbounds());
     } catch (error) {
-      toast.error("Unable to load inbound orders", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load inbound orders", error);
     } finally {
       setIsLoading(false);
     }
@@ -198,9 +199,7 @@ function InboundContent({
       setWarehouses(loadedWarehouses);
       setProducts(loadedProducts);
     } catch (error) {
-      toast.error("Unable to load form options", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load form options", error);
     } finally {
       setIsLoadingLookups(false);
     }
@@ -228,9 +227,7 @@ function InboundContent({
       }));
       return loadedLocations;
     } catch (error) {
-      toast.error("Unable to load warehouse locations", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load warehouse locations", error);
       return [];
     } finally {
       setLoadingLocationWarehouseIds((current) =>
@@ -376,8 +373,7 @@ function InboundContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       if (editingInbound) {
         await updateInbound(editingInbound.inboundOrderId, payload);
         toast.success("Inbound order updated");
@@ -388,13 +384,7 @@ function InboundContent({
 
       setFormOpen(false);
       await loadInbounds();
-    } catch (error) {
-      toast.error("Inbound action failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Inbound action failed");
   }
 
   async function handleDelete() {
@@ -402,19 +392,12 @@ function InboundContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await deleteInbound(deletingInbound.inboundOrderId);
       toast.success("Inbound order deleted");
       setDeletingInbound(null);
       await loadInbounds();
-    } catch (error) {
-      toast.error("Delete failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Delete failed");
   }
 
   async function handleComplete() {
@@ -422,23 +405,18 @@ function InboundContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await completeInbound(completingInbound.inboundOrderId);
       toast.success("Inbound order completed");
       setCompletingInbound(null);
       await loadInbounds();
-    } catch (error) {
-      toast.error("Done failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Done failed");
   }
 
   function getWarehouseLabel(warehouseId: string) {
-    const warehouse = warehouses.find((item) => item.warehouse_id === warehouseId);
+    const warehouse = warehouses.find(
+      (item) => item.warehouse_id === warehouseId,
+    );
     if (!warehouse) {
       return warehouseId || "N/A";
     }
@@ -456,7 +434,9 @@ function InboundContent({
   }
 
   function getLocationLabel(locationId: string) {
-    const location = allLocations.find((item) => item.location_id === locationId);
+    const location = allLocations.find(
+      (item) => item.location_id === locationId,
+    );
     if (!location) {
       return locationId || "N/A";
     }
@@ -590,10 +570,15 @@ function InboundContent({
         emptyMessage="No inbound orders have been created yet."
       />
 
-      <Dialog open={Boolean(detailInbound)} onOpenChange={(open) => !open && setDetailInbound(null)}>
+      <Dialog
+        open={Boolean(detailInbound)}
+        onOpenChange={(open) => !open && setDetailInbound(null)}
+      >
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detailInbound?.inboundNo ?? "Inbound details"}</DialogTitle>
+            <DialogTitle>
+              {detailInbound?.inboundNo ?? "Inbound details"}
+            </DialogTitle>
             <DialogDescription>
               Review inbound header information and received items.
             </DialogDescription>
@@ -658,190 +643,174 @@ function InboundContent({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingInbound ? "Edit inbound" : "Create inbound"}
-            </DialogTitle>
-            <DialogDescription>
-              Select warehouse, products, and locations from existing records.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="inboundNo">Inbound No</Label>
-                <Input
-                  id="inboundNo"
-                  value={form.inboundNo}
-                  onChange={(event) =>
-                    setForm({ ...form, inboundNo: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="warehouseId">Warehouse</Label>
-                <select
-                  id="warehouseId"
-                  value={form.warehouseId}
-                  disabled={isLoadingLookups}
-                  onChange={(event) => handleWarehouseChange(event.target.value)}
-                  className={selectClassName}
+      <CrudFormDialog
+        open={formOpen}
+        title={editingInbound ? "Edit inbound" : "Create inbound"}
+        description="Select warehouse, products, and locations from existing records."
+        isSubmitting={isSubmitting}
+        submitText="Save Inbound"
+        submitDisabled={isLoadingLookups || !hasInboundChanges}
+        error={fieldError}
+        contentClassName="max-h-[90vh] max-w-5xl overflow-y-auto"
+        formClassName="space-y-5"
+        onOpenChange={setFormOpen}
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="inboundNo">Inbound No</Label>
+            <Input
+              id="inboundNo"
+              value={form.inboundNo}
+              onChange={(event) =>
+                setForm({ ...form, inboundNo: event.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="warehouseId">Warehouse</Label>
+            <select
+              id="warehouseId"
+              value={form.warehouseId}
+              disabled={isLoadingLookups}
+              onChange={(event) => handleWarehouseChange(event.target.value)}
+              className={selectClassName}
+            >
+              <option value="">Select warehouse</option>
+              {activeWarehouses.map((warehouse) => (
+                <option
+                  key={warehouse.warehouse_id}
+                  value={warehouse.warehouse_id}
                 >
-                  <option value="">Select warehouse</option>
-                  {activeWarehouses.map((warehouse) => (
-                    <option
-                      key={warehouse.warehouse_id}
-                      value={warehouse.warehouse_id}
-                    >
-                      {warehouse.warehouse_code} - {warehouse.warehouse_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {warehouse.warehouse_code} - {warehouse.warehouse_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="supplierName">Supplier</Label>
+            <Input
+              id="supplierName"
+              value={form.supplierName}
+              onChange={(event) =>
+                setForm({ ...form, supplierName: event.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="actualDate">Actual Date</Label>
+            <Input
+              id="actualDate"
+              type="date"
+              value={form.actualDate}
+              onChange={(event) =>
+                setForm({ ...form, actualDate: event.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-950">Items</p>
+              <p className="text-sm text-slate-500">
+                Add products and receiving locations for this inbound order.
+              </p>
             </div>
+            <Button type="button" size="sm" onClick={addItem}>
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplierName">Supplier</Label>
-                <Input
-                  id="supplierName"
-                  value={form.supplierName}
-                  onChange={(event) =>
-                    setForm({ ...form, supplierName: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="actualDate">Actual Date</Label>
-                <Input
-                  id="actualDate"
-                  type="date"
-                  value={form.actualDate}
-                  onChange={(event) =>
-                    setForm({ ...form, actualDate: event.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">Items</p>
-                  <p className="text-sm text-slate-500">
-                    Add products and receiving locations for this inbound order.
-                  </p>
-                </div>
-                <Button type="button" size="sm" onClick={addItem}>
-                  <Plus className="h-4 w-4" />
-                  Add Item
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {form.items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[1.4fr_1.1fr_120px_44px]"
-                  >
-                    <div className="space-y-2">
-                      <Label htmlFor={`product-${index}`}>Product</Label>
-                      <select
-                        id={`product-${index}`}
-                        value={item.productId}
-                        disabled={isLoadingLookups}
-                        onChange={(event) =>
-                          updateItem(index, { productId: event.target.value })
-                        }
-                        className={selectClassName}
-                      >
-                        <option value="">Select product</option>
-                        {activeProducts.map((product) => (
-                          <option
-                            key={product.product_id}
-                            value={product.product_id}
-                          >
-                            {product.sku} - {product.product_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`location-${index}`}>Location</Label>
-                      <select
-                        id={`location-${index}`}
-                        value={item.locationId}
-                        disabled={!form.warehouseId || isLoadingCurrentLocations}
-                        onChange={(event) =>
-                          updateItem(index, { locationId: event.target.value })
-                        }
-                        className={selectClassName}
-                      >
-                        <option value="">
-                          {form.warehouseId
-                            ? "Select location"
-                            : "Select warehouse first"}
-                        </option>
-                        {currentLocations.map((location) => (
-                          <option
-                            key={location.location_id}
-                            value={location.location_id}
-                          >
-                            {location.zone || location.location_id}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`qty-${index}`}>Qty</Label>
-                      <Input
-                        id={`qty-${index}`}
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={item.actualQty}
-                        onChange={(event) =>
-                          updateItem(index, { actualQty: event.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        disabled={form.items.length === 1}
-                        onClick={() => removeItem(index)}
-                        aria-label="Remove item"
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {fieldError ? <p className="text-sm text-red-600">{fieldError}</p> : null}
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  isSubmitting || isLoadingLookups || !hasInboundChanges
-                }
+          <div className="space-y-3">
+            {form.items.map((item, index) => (
+              <div
+                key={index}
+                className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[1.4fr_1.1fr_120px_44px]"
               >
-                {isSubmitting ? "Saving..." : "Save Inbound"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor={`product-${index}`}>Product</Label>
+                  <select
+                    id={`product-${index}`}
+                    value={item.productId}
+                    disabled={isLoadingLookups}
+                    onChange={(event) =>
+                      updateItem(index, { productId: event.target.value })
+                    }
+                    className={selectClassName}
+                  >
+                    <option value="">Select product</option>
+                    {activeProducts.map((product) => (
+                      <option
+                        key={product.product_id}
+                        value={product.product_id}
+                      >
+                        {product.sku} - {product.product_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`location-${index}`}>Location</Label>
+                  <select
+                    id={`location-${index}`}
+                    value={item.locationId}
+                    disabled={!form.warehouseId || isLoadingCurrentLocations}
+                    onChange={(event) =>
+                      updateItem(index, { locationId: event.target.value })
+                    }
+                    className={selectClassName}
+                  >
+                    <option value="">
+                      {form.warehouseId
+                        ? "Select location"
+                        : "Select warehouse first"}
+                    </option>
+                    {currentLocations.map((location) => (
+                      <option
+                        key={location.location_id}
+                        value={location.location_id}
+                      >
+                        {location.zone || location.location_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`qty-${index}`}>Qty</Label>
+                  <Input
+                    id={`qty-${index}`}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={item.actualQty}
+                    onChange={(event) =>
+                      updateItem(index, { actualQty: event.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={form.items.length === 1}
+                    onClick={() => removeItem(index)}
+                    aria-label="Remove item"
+                  >
+                    <MinusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CrudFormDialog>
 
       <ConfirmDialog
         open={Boolean(deletingInbound)}

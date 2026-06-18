@@ -1,17 +1,5 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnModuleInit,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
-import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
@@ -23,6 +11,7 @@ import {
   WarehouseLocationGrpc,
   WarehouseLocationGrpcResponse,
 } from '../grpc/warehouse-grpc.types';
+import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateWarehouseLocationDto } from './dto/create-warehouse-location.dto';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -31,11 +20,11 @@ import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 
 @Injectable()
 export class WarehouseService implements OnModuleInit {
-  private readonly logger = new Logger(WarehouseService.name);
   private warehouseGrpcClient!: WarehouseGrpcClient;
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
@@ -209,7 +198,7 @@ export class WarehouseService implements OnModuleInit {
         warehouse: this.toWarehouseResponse(response.warehouse),
       };
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -223,7 +212,7 @@ export class WarehouseService implements OnModuleInit {
         location: this.toWarehouseLocationResponse(response.location),
       };
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -233,7 +222,7 @@ export class WarehouseService implements OnModuleInit {
     try {
       return await request;
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -243,7 +232,7 @@ export class WarehouseService implements OnModuleInit {
     try {
       return await request;
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -282,34 +271,10 @@ export class WarehouseService implements OnModuleInit {
     };
   }
 
-  private toHttpException(error: unknown) {
-    const grpcError = error as { code?: number; details?: string };
-    this.logger.warn(
-      `WMS Warehouse gRPC request failed: code=${grpcError.code ?? 'unknown'}, details=${grpcError.details ?? 'none'}`,
-    );
-
-    const message = grpcError.details || 'WMS warehouse request failed';
-
-    if (grpcError.code === status.INVALID_ARGUMENT) {
-      return new BadRequestException(message);
-    }
-
-    if (grpcError.code === status.NOT_FOUND) {
-      return new NotFoundException(message);
-    }
-
-    if (grpcError.code === status.ALREADY_EXISTS) {
-      return new ConflictException(message);
-    }
-
-    if (grpcError.code === status.UNAUTHENTICATED) {
-      return new UnauthorizedException(message);
-    }
-
-    if (grpcError.code === status.PERMISSION_DENIED) {
-      return new ForbiddenException(message);
-    }
-
-    return new BadGatewayException(message);
+  private mapGrpcError(error: unknown) {
+    return this.exceptionMapper.toHttpException(error, {
+      domain: 'Warehouse',
+      fallbackMessage: 'WMS warehouse request failed',
+    });
   }
 }

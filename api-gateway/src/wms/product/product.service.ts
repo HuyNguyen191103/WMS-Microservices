@@ -1,17 +1,5 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnModuleInit,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
-import { status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
@@ -20,17 +8,18 @@ import {
   ProductGrpcClient,
   ProductGrpcResponse,
 } from '../grpc/product-grpc.types';
+import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductService implements OnModuleInit {
-  private readonly logger = new Logger(ProductService.name);
   private productGrpcClient!: ProductGrpcClient;
 
   constructor(
     @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
@@ -136,7 +125,7 @@ export class ProductService implements OnModuleInit {
         product: this.toProductResponse(response.product),
       };
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -146,7 +135,7 @@ export class ProductService implements OnModuleInit {
     try {
       return await request;
     } catch (error) {
-      throw this.toHttpException(error);
+      throw this.mapGrpcError(error);
     }
   }
 
@@ -170,34 +159,10 @@ export class ProductService implements OnModuleInit {
     };
   }
 
-  private toHttpException(error: unknown) {
-    const grpcError = error as { code?: number; details?: string };
-    this.logger.warn(
-      `WMS Product gRPC request failed: code=${grpcError.code ?? 'unknown'}, details=${grpcError.details ?? 'none'}`,
-    );
-
-    const message = grpcError.details || 'WMS product request failed';
-
-    if (grpcError.code === status.INVALID_ARGUMENT) {
-      return new BadRequestException(message);
-    }
-
-    if (grpcError.code === status.NOT_FOUND) {
-      return new NotFoundException(message);
-    }
-
-    if (grpcError.code === status.ALREADY_EXISTS) {
-      return new ConflictException(message);
-    }
-
-    if (grpcError.code === status.UNAUTHENTICATED) {
-      return new UnauthorizedException(message);
-    }
-
-    if (grpcError.code === status.PERMISSION_DENIED) {
-      return new ForbiddenException(message);
-    }
-
-    return new BadGatewayException(message);
+  private mapGrpcError(error: unknown) {
+    return this.exceptionMapper.toHttpException(error, {
+      domain: 'Product',
+      fallbackMessage: 'WMS product request failed',
+    });
   }
 }

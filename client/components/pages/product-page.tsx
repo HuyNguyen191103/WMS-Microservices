@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppShell } from "@/components/app-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CrudFormDialog } from "@/components/crud-form-dialog";
 import { DataTable, DataTableColumn } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -20,7 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAsyncAction } from "@/hooks/use-async-action";
 import { canCreateProduct, canWriteProduct } from "@/lib/permissions";
+import { showRequestError } from "@/lib/request-error";
 import {
   createProduct,
   deleteProduct,
@@ -63,11 +66,13 @@ function ProductContent({
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, run } = useAsyncAction();
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  const [restoringProduct, setRestoringProduct] = useState<Product | null>(null);
+  const [restoringProduct, setRestoringProduct] = useState<Product | null>(
+    null,
+  );
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [fieldError, setFieldError] = useState("");
@@ -85,9 +90,7 @@ function ProductContent({
     try {
       setProducts(await listProducts());
     } catch (error) {
-      toast.error("Unable to load products", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      showRequestError("Unable to load products", error);
     } finally {
       setIsLoading(false);
     }
@@ -141,8 +144,7 @@ function ProductContent({
       unit: form.unit.trim(),
     };
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       if (editingProduct) {
         await updateProduct(editingProduct.product_id, payload);
         toast.success("Product updated");
@@ -153,13 +155,7 @@ function ProductContent({
 
       setFormOpen(false);
       await loadProducts();
-    } catch (error) {
-      toast.error("Product action failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Product action failed");
   }
 
   async function handleDelete() {
@@ -167,19 +163,12 @@ function ProductContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await deleteProduct(deletingProduct.product_id);
       toast.success("Product deleted");
       setDeletingProduct(null);
       await loadProducts();
-    } catch (error) {
-      toast.error("Delete failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Delete failed");
   }
 
   async function handleRestore() {
@@ -187,19 +176,12 @@ function ProductContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await restoreProduct(restoringProduct.product_id);
       toast.success("Product restored");
       setRestoringProduct(null);
       await loadProducts();
-    } catch (error) {
-      toast.error("Restore failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, "Restore failed");
   }
 
   const columns = useMemo<DataTableColumn<Product>[]>(
@@ -217,7 +199,11 @@ function ProductContent({
           </div>
         ),
       },
-      { key: "category", header: "Category", cell: (product) => product.category || "N/A" },
+      {
+        key: "category",
+        header: "Category",
+        cell: (product) => product.category || "N/A",
+      },
       { key: "unit", header: "Unit", cell: (product) => product.unit || "N/A" },
       {
         key: "status",
@@ -238,8 +224,7 @@ function ProductContent({
             return <span className="text-xs text-slate-400">Read only</span>;
           }
 
-          const isDeleted =
-            product.status.toUpperCase() === DELETED_STATUS;
+          const isDeleted = product.status.toUpperCase() === DELETED_STATUS;
 
           return isDeleted ? (
             <div className="flex justify-end">
@@ -254,7 +239,11 @@ function ProductContent({
             </div>
           ) : (
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => openEditForm(product)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEditForm(product)}
+              >
                 <Pencil className="h-4 w-4" />
                 Edit
               </Button>
@@ -299,10 +288,15 @@ function ProductContent({
         emptyMessage="No products have been created yet."
       />
 
-      <Dialog open={Boolean(detailProduct)} onOpenChange={(open) => !open && setDetailProduct(null)}>
+      <Dialog
+        open={Boolean(detailProduct)}
+        onOpenChange={(open) => !open && setDetailProduct(null)}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{detailProduct?.product_name ?? "Product details"}</DialogTitle>
+            <DialogTitle>
+              {detailProduct?.product_name ?? "Product details"}
+            </DialogTitle>
             <DialogDescription>
               Double-click any product row to inspect its full information.
             </DialogDescription>
@@ -310,11 +304,23 @@ function ProductContent({
           {detailProduct ? (
             <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
               <DetailItem label="SKU" value={detailProduct.sku} />
-              <DetailItem label="Status" value={<StatusBadge status={detailProduct.status} />} />
-              <DetailItem label="Category" value={detailProduct.category || "N/A"} />
+              <DetailItem
+                label="Status"
+                value={<StatusBadge status={detailProduct.status} />}
+              />
+              <DetailItem
+                label="Category"
+                value={detailProduct.category || "N/A"}
+              />
               <DetailItem label="Unit" value={detailProduct.unit || "N/A"} />
-              <DetailItem label="Created By" value={detailProduct.created_by || "N/A"} />
-              <DetailItem label="Updated By" value={detailProduct.updated_by || "N/A"} />
+              <DetailItem
+                label="Created By"
+                value={detailProduct.created_by || "N/A"}
+              />
+              <DetailItem
+                label="Updated By"
+                value={detailProduct.updated_by || "N/A"}
+              />
               <div className="sm:col-span-2">
                 <DetailItem
                   label="Description"
@@ -331,84 +337,80 @@ function ProductContent({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? "Edit product" : "Create product"}</DialogTitle>
-            <DialogDescription>
-              Keep product details consistent for all warehouse workflows.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={form.sku}
-                  onChange={(event) => setForm({ ...form, sku: event.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="productName">Product Name</Label>
-                <Input
-                  id="productName"
-                  value={form.productName}
-                  onChange={(event) =>
-                    setForm({ ...form, productName: event.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={form.category}
-                  onChange={(event) => setForm({ ...form, category: event.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unit">Unit</Label>
-                <select
-                  id="unit"
-                  value={form.unit}
-                  onChange={(event) => setForm({ ...form, unit: event.target.value })}
-                  className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="">Select unit</option>
-                  {unitOptions.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-              />
-            </div>
-            {fieldError ? <p className="text-sm text-red-600">{fieldError}</p> : null}
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !hasProductChanges}
-              >
-                {isSubmitting ? "Saving..." : "Save Product"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CrudFormDialog
+        open={formOpen}
+        title={editingProduct ? "Edit product" : "Create product"}
+        description="Keep product details consistent for all warehouse workflows."
+        isSubmitting={isSubmitting}
+        submitText="Save Product"
+        submitDisabled={!hasProductChanges}
+        error={fieldError}
+        onOpenChange={setFormOpen}
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="sku">SKU</Label>
+            <Input
+              id="sku"
+              value={form.sku}
+              onChange={(event) =>
+                setForm({ ...form, sku: event.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="productName">Product Name</Label>
+            <Input
+              id="productName"
+              value={form.productName}
+              onChange={(event) =>
+                setForm({ ...form, productName: event.target.value })
+              }
+            />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Input
+              id="category"
+              value={form.category}
+              onChange={(event) =>
+                setForm({ ...form, category: event.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unit">Unit</Label>
+            <select
+              id="unit"
+              value={form.unit}
+              onChange={(event) =>
+                setForm({ ...form, unit: event.target.value })
+              }
+              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+            >
+              <option value="">Select unit</option>
+              {unitOptions.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={form.description}
+            onChange={(event) =>
+              setForm({ ...form, description: event.target.value })
+            }
+          />
+        </div>
+      </CrudFormDialog>
 
       <ConfirmDialog
         open={Boolean(deletingProduct)}
