@@ -3,14 +3,15 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
-  ListWarehouseLocationsGrpcResponse,
-  ListWarehousesGrpcResponse,
-  WarehouseGrpc,
-  WarehouseGrpcClient,
-  WarehouseGrpcResponse,
-  WarehouseLocationGrpc,
-  WarehouseLocationGrpcResponse,
-} from '../grpc/warehouse-grpc.types';
+  ListWarehouseLocationsResponse as ListWarehouseLocationsGrpcResponse,
+  ListWarehousesResponse as ListWarehousesGrpcResponse,
+  WAREHOUSE_API_SERVICE_NAME,
+  Warehouse as WarehouseGrpc,
+  WarehouseApiClient as WarehouseGrpcClient,
+  WarehouseLocation as WarehouseLocationGrpc,
+  WarehouseLocationResponse as WarehouseLocationGrpcResponse,
+  WarehouseResponse as WarehouseGrpcResponse,
+} from '../../generated/wms';
 import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateWarehouseLocationDto } from './dto/create-warehouse-location.dto';
@@ -23,14 +24,15 @@ export class WarehouseService implements OnModuleInit {
   private warehouseGrpcClient!: WarehouseGrpcClient;
 
   constructor(
-    @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(WMS_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
     private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
-    this.warehouseGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<WarehouseGrpcClient>('WarehouseApi');
+    this.warehouseGrpcClient = this.client.getService<WarehouseGrpcClient>(
+      WAREHOUSE_API_SERVICE_NAME,
+    );
   }
 
   async createWarehouse(user: AuthenticatedUser, body: CreateWarehouseDto) {

@@ -13,18 +13,19 @@ import {
 import type { ClientGrpc } from '@nestjs/microservices';
 import { Metadata, status } from '@grpc/grpc-js';
 import { firstValueFrom } from 'rxjs';
+import {
+  AUTH_API_SERVICE_NAME,
+  AuthApiClient as AuthGrpcClient,
+  AuthResponse as AuthGrpcResponse,
+  GetMeResponse as GetMeGrpcResponse,
+  RegisterResponse as RegisterGrpcResponse,
+  Role as RoleGrpc,
+  UserInfo as UserInfoGrpc,
+  UserProfile as UserProfileGrpc,
+} from '../generated/auth';
 import { AUTH_GRPC_CLIENT } from './auth.constants';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import {
-  AuthGrpcClient,
-  AuthGrpcResponse,
-  GetMeGrpcResponse,
-  RegisterGrpcResponse,
-  RoleGrpc,
-  UserInfoGrpc,
-  UserProfileGrpc,
-} from './grpc/auth-grpc.types';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -32,13 +33,14 @@ export class AuthService implements OnModuleInit {
   private authGrpcClient!: AuthGrpcClient;
 
   constructor(
-    @Inject(AUTH_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(AUTH_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
   ) {}
 
   onModuleInit() {
-    this.authGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<AuthGrpcClient>('AuthApi');
+    this.authGrpcClient = this.client.getService<AuthGrpcClient>(
+      AUTH_API_SERVICE_NAME,
+    );
   }
 
   async register(body: RegisterDto) {

@@ -3,16 +3,16 @@ import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CreateProductRequest as CreateProductGrpcRequest,
+  DeleteProductRequest as DeleteProductGrpcRequest,
+  GetProductRequest as GetProductGrpcRequest,
+  Product as ProductGrpc,
+  RestoreProductRequest as RestoreProductGrpcRequest,
+  UpdateProductRequest as UpdateProductGrpcRequest,
+} from '../../generated/wms';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { Product } from './entities/product.entity';
-import {
-  CreateProductGrpcRequest,
-  DeleteProductGrpcRequest,
-  GetProductGrpcRequest,
-  ProductGrpc,
-  RestoreProductGrpcRequest,
-  UpdateProductGrpcRequest,
-} from './grpc/product-grpc.types';
 
 const ACTIVE_STATUS = 'ACTIVE';
 const DELETED_STATUS = 'DELETE';

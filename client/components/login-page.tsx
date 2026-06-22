@@ -22,12 +22,12 @@ const demoAccounts = [
   {
     role: "Manage",
     mail: "manage01+02@gmail.com",
-    password: "manage01+02123456",
+    password: "manage123456",
   },
   {
     role: "Employee",
     mail: "employee01+02@gmail.com",
-    password: "employee01+02123456",
+    password: "employee123456",
   },
 ];
 

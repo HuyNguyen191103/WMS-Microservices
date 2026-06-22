@@ -3,25 +3,29 @@ import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CreateWarehouseLocationRequest as CreateWarehouseLocationGrpcRequest,
+  CreateWarehouseRequest as CreateWarehouseGrpcRequest,
+  DeleteWarehouseLocationRequest as DeleteWarehouseLocationGrpcRequest,
+  DeleteWarehouseRequest as DeleteWarehouseGrpcRequest,
+  GetWarehouseLocationRequest as GetWarehouseLocationGrpcRequest,
+  GetWarehouseRequest as GetWarehouseGrpcRequest,
+  ListWarehouseLocationsRequest as ListWarehouseLocationsGrpcRequest,
+  RestoreWarehouseLocationRequest as RestoreWarehouseLocationGrpcRequest,
+  RestoreWarehouseRequest as RestoreWarehouseGrpcRequest,
+  UpdateWarehouseLocationRequest as UpdateWarehouseLocationGrpcRequest,
+  UpdateWarehouseRequest as UpdateWarehouseGrpcRequest,
+  Warehouse as WarehouseGrpc,
+  WarehouseLocation as WarehouseLocationGrpc,
+} from '../../generated/wms';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { WarehouseLocation } from './entities/warehouse-location.entity';
 import { Warehouse } from './entities/warehouse.entity';
-import {
-  ActorGrpcRequest,
-  CreateWarehouseGrpcRequest,
-  CreateWarehouseLocationGrpcRequest,
+
+type ActorGrpcRequest = Pick<
   DeleteWarehouseGrpcRequest,
-  DeleteWarehouseLocationGrpcRequest,
-  GetWarehouseGrpcRequest,
-  GetWarehouseLocationGrpcRequest,
-  ListWarehouseLocationsGrpcRequest,
-  RestoreWarehouseGrpcRequest,
-  RestoreWarehouseLocationGrpcRequest,
-  UpdateWarehouseGrpcRequest,
-  UpdateWarehouseLocationGrpcRequest,
-  WarehouseGrpc,
-  WarehouseLocationGrpc,
-} from './grpc/warehouse-grpc.types';
+  'actorUsername' | 'actorUserId' | 'actorRole'
+>;
 
 const ACTIVE_STATUS = 'ACTIVE';
 const DELETED_STATUS = 'DELETE';

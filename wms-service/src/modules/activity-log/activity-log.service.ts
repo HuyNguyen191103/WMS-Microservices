@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { ActivityLog as ActivityLogGrpc } from '../../generated/wms';
 import { ActivityLog } from './entities/activity-log.entity';
-import { ActivityLogGrpc } from './grpc/activity-log-grpc.types';
 
 const PAGE_SIZE = 20;
 

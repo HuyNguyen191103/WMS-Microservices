@@ -2,10 +2,11 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
-  InventoryGrpcClient,
-  InventoryItemGrpc,
-  InventoryTransactionGrpc,
-} from '../grpc/inventory-grpc.types';
+  INVENTORY_API_SERVICE_NAME,
+  InventoryApiClient as InventoryGrpcClient,
+  InventoryItem as InventoryItemGrpc,
+  InventoryTransaction as InventoryTransactionGrpc,
+} from '../../generated/wms';
 import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 
@@ -14,14 +15,15 @@ export class InventoryService implements OnModuleInit {
   private inventoryGrpcClient!: InventoryGrpcClient;
 
   constructor(
-    @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(WMS_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
     private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
-    this.inventoryGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<InventoryGrpcClient>('InventoryApi');
+    this.inventoryGrpcClient = this.client.getService<InventoryGrpcClient>(
+      INVENTORY_API_SERVICE_NAME,
+    );
   }
 
   async listInventoryItems(warehouseId: string) {

@@ -3,11 +3,12 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
-  ListProductsGrpcResponse,
-  ProductGrpc,
-  ProductGrpcClient,
-  ProductGrpcResponse,
-} from '../grpc/product-grpc.types';
+  ListProductsResponse as ListProductsGrpcResponse,
+  PRODUCT_API_SERVICE_NAME,
+  Product as ProductGrpc,
+  ProductApiClient as ProductGrpcClient,
+  ProductResponse as ProductGrpcResponse,
+} from '../../generated/wms';
 import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -18,14 +19,16 @@ export class ProductService implements OnModuleInit {
   private productGrpcClient!: ProductGrpcClient;
 
   constructor(
-    @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(WMS_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
+
     private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
-    this.productGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<ProductGrpcClient>('ProductApi');
+    this.productGrpcClient = this.client.getService<ProductGrpcClient>(
+      PRODUCT_API_SERVICE_NAME,
+    );
   }
 
   async createProduct(user: AuthenticatedUser, body: CreateProductDto) {

@@ -1,45 +1,42 @@
 import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import type {
-  CreateProductGrpcRequest,
-  DeleteProductGrpcRequest,
-  GetProductGrpcRequest,
-  ListProductsGrpcRequest,
-  RestoreProductGrpcRequest,
-  UpdateProductGrpcRequest,
-} from './grpc/product-grpc.types';
+import {
+  CreateProductRequest as CreateProductGrpcRequest,
+  DeleteProductRequest as DeleteProductGrpcRequest,
+  GetProductRequest as GetProductGrpcRequest,
+  ListProductsRequest as ListProductsGrpcRequest,
+  ProductApiController,
+  ProductApiControllerMethods,
+  RestoreProductRequest as RestoreProductGrpcRequest,
+  UpdateProductRequest as UpdateProductGrpcRequest,
+} from '../../generated/wms';
 import { ProductService } from './product.service';
 
 @Controller()
-export class ProductGrpcController {
+@ProductApiControllerMethods()
+export class ProductGrpcController implements ProductApiController {
   constructor(private readonly productService: ProductService) {}
 
-  @GrpcMethod('ProductApi', 'CreateProduct')
   createProduct(request: CreateProductGrpcRequest) {
     return this.productService.createProduct(request);
   }
 
-  @GrpcMethod('ProductApi', 'ListProducts')
   listProducts(_request: ListProductsGrpcRequest) {
+    void _request;
     return this.productService.listProducts();
   }
 
-  @GrpcMethod('ProductApi', 'GetProduct')
   getProduct(request: GetProductGrpcRequest) {
     return this.productService.getProduct(request);
   }
 
-  @GrpcMethod('ProductApi', 'UpdateProduct')
   updateProduct(request: UpdateProductGrpcRequest) {
     return this.productService.updateProduct(request);
   }
 
-  @GrpcMethod('ProductApi', 'DeleteProduct')
   deleteProduct(request: DeleteProductGrpcRequest) {
     return this.productService.deleteProduct(request);
   }
 
-  @GrpcMethod('ProductApi', 'RestoreProduct')
   restoreProduct(request: RestoreProductGrpcRequest) {
     return this.productService.restoreProduct(request);
   }

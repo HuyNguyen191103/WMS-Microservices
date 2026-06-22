@@ -1,21 +1,21 @@
 import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import type {
-  ListInventoryItemsGrpcRequest,
-  ListInventoryTransactionsGrpcRequest,
-} from './grpc/inventory-grpc.types';
+import {
+  InventoryApiController,
+  InventoryApiControllerMethods,
+  ListInventoryItemsRequest as ListInventoryItemsGrpcRequest,
+  ListInventoryTransactionsRequest as ListInventoryTransactionsGrpcRequest,
+} from '../../generated/wms';
 import { InventoryService } from './inventory.service';
 
 @Controller()
-export class InventoryGrpcController {
+@InventoryApiControllerMethods()
+export class InventoryGrpcController implements InventoryApiController {
   constructor(private readonly inventoryService: InventoryService) {}
 
-  @GrpcMethod('InventoryApi', 'ListInventoryItems')
   listInventoryItems(request: ListInventoryItemsGrpcRequest) {
     return this.inventoryService.listInventoryItems(request);
   }
 
-  @GrpcMethod('InventoryApi', 'ListInventoryTransactions')
   listInventoryTransactions(request: ListInventoryTransactionsGrpcRequest) {
     return this.inventoryService.listInventoryTransactions(request.page ?? 1);
   }

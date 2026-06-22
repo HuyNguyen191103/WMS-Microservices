@@ -2,9 +2,10 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
-  ActivityLogGrpc,
-  ActivityLogGrpcClient,
-} from '../grpc/activity-log-grpc.types';
+  ACTIVITY_LOG_API_SERVICE_NAME,
+  ActivityLog as ActivityLogGrpc,
+  ActivityLogApiClient as ActivityLogGrpcClient,
+} from '../../generated/wms';
 import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 
@@ -13,14 +14,15 @@ export class ActivityLogService implements OnModuleInit {
   private activityLogGrpcClient!: ActivityLogGrpcClient;
 
   constructor(
-    @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(WMS_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
     private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
-    this.activityLogGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<ActivityLogGrpcClient>('ActivityLogApi');
+    this.activityLogGrpcClient = this.client.getService<ActivityLogGrpcClient>(
+      ACTIVITY_LOG_API_SERVICE_NAME,
+    );
   }
 
   async listActivityLogs(page: number) {

@@ -3,6 +3,16 @@ import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Not, Repository } from 'typeorm';
+import {
+  CompleteInboundRequest as CompleteInboundGrpcRequest,
+  CreateInboundRequest as CreateInboundGrpcRequest,
+  DeleteInboundRequest as DeleteInboundGrpcRequest,
+  GetInboundRequest as GetInboundGrpcRequest,
+  Inbound as InboundGrpc,
+  InboundItem as InboundItemGrpc,
+  InboundItemInput as InboundItemInputGrpc,
+  UpdateInboundRequest as UpdateInboundGrpcRequest,
+} from '../../generated/wms';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
@@ -10,17 +20,11 @@ import { WarehouseLocation } from '../warehouse/entities/warehouse-location.enti
 import { Warehouse } from '../warehouse/entities/warehouse.entity';
 import { InboundItem } from './entities/inbound-item.entity';
 import { InboundOrder } from './entities/inbound-order.entity';
-import {
-  ActorGrpcRequest,
+
+type ActorGrpcRequest = Pick<
   CompleteInboundGrpcRequest,
-  CreateInboundGrpcRequest,
-  DeleteInboundGrpcRequest,
-  GetInboundGrpcRequest,
-  InboundGrpc,
-  InboundItemGrpc,
-  InboundItemInputGrpc,
-  UpdateInboundGrpcRequest,
-} from './grpc/inbound-grpc.types';
+  'actorUsername' | 'actorUserId' | 'actorRole'
+>;
 
 const CREATED_STATUS = 'CREATED';
 const DONE_STATUS = 'DONE';

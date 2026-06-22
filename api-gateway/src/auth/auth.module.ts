@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { WNS_AUTH_V1_PACKAGE_NAME } from '../generated/auth';
 import { AUTH_GRPC_CLIENT } from './auth.constants';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -18,7 +19,7 @@ import { RolesGuard } from './roles.guard';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.GRPC,
           options: {
-            package: 'wns.auth.v1',
+            package: WNS_AUTH_V1_PACKAGE_NAME,
             protoPath: join(process.cwd(), '..', 'proto', 'auth.proto'),
             url: configService.get<string>('AUTH_GRPC_URL', 'localhost:5001'),
             loader: {

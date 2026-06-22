@@ -4,12 +4,13 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedUser } from '../../auth/authenticated-user.interface';
 import {
-  InboundGrpc,
-  InboundGrpcClient,
-  InboundGrpcResponse,
-  InboundItemGrpc,
-  ListInboundsGrpcResponse,
-} from '../grpc/inbound-grpc.types';
+  INBOUND_API_SERVICE_NAME,
+  Inbound as InboundGrpc,
+  InboundApiClient as InboundGrpcClient,
+  InboundItem as InboundItemGrpc,
+  InboundResponse as InboundGrpcResponse,
+  ListInboundsResponse as ListInboundsGrpcResponse,
+} from '../../generated/wms';
 import { WmsGrpcExceptionMapper } from '../grpc/wms-grpc-exception.mapper';
 import { WMS_GRPC_CLIENT } from '../wms.constants';
 import { CreateInboundDto } from './dto/create-inbound.dto';
@@ -20,14 +21,15 @@ export class InboundService implements OnModuleInit {
   private inboundGrpcClient!: InboundGrpcClient;
 
   constructor(
-    @Inject(WMS_GRPC_CLIENT) private readonly client: Record<string, unknown>,
+    @Inject(WMS_GRPC_CLIENT)
+    private readonly client: ClientGrpc,
     private readonly exceptionMapper: WmsGrpcExceptionMapper,
   ) {}
 
   onModuleInit() {
-    this.inboundGrpcClient = (
-      this.client as unknown as ClientGrpc
-    ).getService<InboundGrpcClient>('InboundApi');
+    this.inboundGrpcClient = this.client.getService<InboundGrpcClient>(
+      INBOUND_API_SERVICE_NAME,
+    );
   }
 
   async createInbound(user: AuthenticatedUser, body: CreateInboundDto) {
@@ -76,7 +78,7 @@ export class InboundService implements OnModuleInit {
           warehouseId: body.warehouseId,
           supplierName: body.supplierName,
           actualDate: body.actualDate,
-          items: body.items,
+          items: body.items ?? [],
           ...this.toActorRequest(user),
         }),
       ),

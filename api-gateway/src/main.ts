@@ -19,8 +19,13 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT ?? 3001;
+  const obj = {
+    b: 2,
+    a: 1,
+    c: 3,
+  };
+  console.log(Object.values(obj));
   await app.listen(port);
-
 }
 
 bootstrap();

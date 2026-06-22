@@ -3,13 +3,13 @@ import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import {
+  InventoryItem as InventoryItemGrpc,
+  InventoryTransaction as InventoryTransactionGrpc,
+  ListInventoryItemsRequest as ListInventoryItemsGrpcRequest,
+} from '../../generated/wms';
 import { InventoryItem } from './entities/inventory-item.entity';
 import { InventoryTransaction } from './entities/inventory-transaction.entity';
-import {
-  InventoryItemGrpc,
-  InventoryTransactionGrpc,
-  ListInventoryItemsGrpcRequest,
-} from './grpc/inventory-grpc.types';
 
 const PAGE_SIZE = 20;
 

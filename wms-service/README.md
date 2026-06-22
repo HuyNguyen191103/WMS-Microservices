@@ -31,6 +31,17 @@
 $ npm install
 ```
 
+## Generate gRPC contracts
+
+TypeScript gRPC contracts are generated from the shared files in `../proto`.
+Generated files are not committed.
+
+```bash
+$ npm run proto:generate
+```
+
+Build, development, test, and lint scripts generate them automatically.
+
 ## Compile and run the project
 
 ```bash
